@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spyne Vehicle Info</title>
+  <style>
+    body {
+      font-family: Inter, sans-serif;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    
+    h2 {
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .section {
+      margin-bottom: 24px;
+    }
+    
+    .btn {
+      background: #18A0FB;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      margin: 6px 6px 6px 0;
+      transition: background 0.2s;
+    }
+    
+    .btn:hover {
+      background: #0D8EE2;
+    }
+    
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .image-options {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #E5E5E5;
+      margin-bottom: 12px;
+    }
+    
+    .divider {
+      height: 1px;
+      background: #E5E5E5;
+      margin: 24px 0;
+    }
+    
+    .status {
+      margin-top: 10px;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: none;
+    }
+    
+    .status.info {
+      background-color: #E3F2FD;
+      color: #0D47A1;
+      display: block;
+    }
+    
+    .status.error {
+      background-color: #FFEBEE;
+      color: #B71C1C;
+      display: block;
+    }
+    
+    .status.success {
+      background-color: #E8F5E9;
+      color: #1B5E20;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="section">
+    <h2>Insert Vehicle Data</h2>
+    <div class="field-grid">
+      <button class="btn" onclick="insertField('vin')">VIN</button>
+      <button class="btn" onclick="insertField('make')">Make</button>
+      <button class="btn" onclick="insertField('model')">Model</button>
+      <button class="btn" onclick="insertField('year')">Year</button>
+      <button class="btn" onclick="insertField('price')">Price</button>
+      <button class="btn" onclick="insertField('body_type')">Body Type</button>
+      <button class="btn" onclick="insertField('trim')">Trim</button>
+      <button class="btn" onclick="insertField('engine')">Engine</button>
+      <button class="btn" onclick="insertField('transmission')">Transmission</button>
+      <button class="btn" onclick="insertField('fuel_type')">Fuel Type</button>
+      <button class="btn" onclick="insertField('mileage')">Mileage</button>
+      <button class="btn" onclick="insertField('exterior_color')">Exterior Color</button>
+      <button class="btn" onclick="insertField('interior_color')">Interior Color</button>
+      <button class="btn" onclick="insertField('drivetrain')">Drivetrain</button>
+      <button class="btn" onclick="insertField('features')">Features</button>
+      <button class="btn" onclick="insertField('fullname')">Full Name</button>
+      <button class="btn" onclick="insertField('full_specs')">Full Specs</button>
+    </div>
+  </div>
+  
+  <div class="divider"></div>
+  
+  <div class="section">
+    <h2>Insert Vehicle Image</h2>
+    <div class="image-options">
+      <label for="category">Category</label>
+      <select id="category">
+        <option value="exterior">Exterior</option>
+        <option value="interior">Interior</option>
+      </select>
+      
+      <label for="processing">Processing</label>
+      <select id="processing">
+        <option value="processed">Processed</option>
+      </select>
+      
+      <label for="ratio">Aspect Ratio</label>
+      <select id="ratio">
+        <option value="16:9">16:9</option>
+        <option value="4:3">4:3</option>
+      </select>
+      
+      <label for="angle">Angle</label>
+      <select id="angle">
+        <option value="front">Front</option>
+      </select>
+    </div>
+    
+    <button class="btn" onclick="insertImage()">Insert Image</button>
+    
+    <div id="status" class="status"></div>
+  </div>
+  
+  <script>
+    // Function to show status message
+    function showStatus(message, type) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = 'status ' + type;
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        statusEl.className = 'status';
+      }, 5000);
+    }
+    
+    // Function to insert field
+    function insertField(field) {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "INSERT_FIELD",
+            payload: { field }
+          }
+        },
+        "*"
+      );
+    }
+    
+    // Function to insert image
+    function insertImage() {
+      const category = document.getElementById("category").value;
+      const processing = document.getElementById("processing").value;
+      const ratio = document.getElementById("ratio").value;
+      const angle = document.getElementById("angle").value;
+      
+      showStatus("Requesting image insertion...", "info");
+      
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "INSERT_IMAGE",
+            payload: { category, processing, ratio, angle }
+          }
+        },
+        "*"
+      );
+    }
+    
+    // Handle incoming messages from the plugin
+    window.onmessage = function(event) {
+      const message = event.data.pluginMessage;
+      
+      if (message.type === "FETCH_IMAGE") {
+        fetchImage(message.url);
+      } else if (message.type === "IMAGE_INSERTED") {
+        showStatus("Image inserted successfully!", "success");
+      } else if (message.type === "IMAGE_ERROR") {
+        showStatus("Error: " + message.error, "error");
+      }
+    };
+    
+    // Function to fetch image data with improved error handling
+    async function fetchImage(url) {
+      try {
+        console.log("Fetching image from:", url);
+        showStatus("Fetching image...", "info");
+        
+        // Add a cache-busting parameter to avoid cached responses
+        const cacheBuster = "?t=" + new Date().getTime();
+        const fetchUrl = url + cacheBuster;
+        
+        // Use mode: 'cors' explicitly to enable CORS
+        const response = await fetch(fetchUrl, {
+          mode: 'cors',
+          credentials: 'omit',
+          headers: {
+            'Accept': 'image/webp,image/png,image/jpeg,*/*'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        console.log("Image fetch successful, processing data...");
+        showStatus("Processing image data...", "info");
+        
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        console.log(`Image data size: ${uint8Array.length} bytes`);
+        
+        // Send image data back to the plugin
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "IMAGE_DATA",
+              data: Array.from(uint8Array)
+            }
+          },
+          "*"
+        );
+      } catch (error) {
+        console.error("Error fetching image:", error);
+        showStatus("Error fetching image: " + error.message, "error");
+        
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "IMAGE_ERROR",
+              error: error.message || "Failed to fetch image"
+            }
+          },
+          "*"
+        );
+      }
+    }
+  </script>
+</body>
+</html>
