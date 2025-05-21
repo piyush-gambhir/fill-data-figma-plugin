@@ -10,7 +10,7 @@
   "editorType": ["figma", "figjam", "slides"],
   "networkAccess": {
     "allowedDomains": [
-      "https://encrypted-tbn0.gstatic.com"
+      "https://media.spyneai.com"
     ]
   }
 }

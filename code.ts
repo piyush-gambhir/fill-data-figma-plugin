@@ -108,11 +108,9 @@ function getVehicleData(index: number, field: string) {
         drivetrain: entry.drivetrain,
         features: entry.features.join(", "),
         fullname: `${entry.year} ${entry.make} ${entry.model} ${entry.trim}`,
-        full_specs: `${entry.year} ${entry.make} ${entry.model} ${
-            entry.trim
-        }\n${entry.engine} | ${entry.transmission} | ${entry.drivetrain}\n${
-            entry.exterior_color
-        } | ${entry.interior_color}\n${entry.features.join(", ")}`,
+        full_specs: `${entry.year} ${entry.make} ${entry.model} ${entry.trim
+            }\n${entry.engine} | ${entry.transmission} | ${entry.drivetrain}\n${entry.exterior_color
+            } | ${entry.interior_color}\n${entry.features.join(", ")}`,
     };
 
     return {
@@ -191,7 +189,7 @@ interface VehicleImage {
 const sampleImages: VehicleImage[] = [
     // Honda Accord
     {
-        url: "https://images.unsplash.com/photo-1617469767053-3c4f2a7c84e0",
+        url: "https://media.spyneai.com/unsafe/fit-in/828x0/filters:format(webp)/https://spyne-media.s3.amazonaws.com/2025-05-21/car_replace_bg_4c0ed53f-d0b6-485c-a3b0-9ef86615cf20.jpg",
         category: "exterior",
         processing: "processed",
         ratio: "16:9",
@@ -203,7 +201,7 @@ const sampleImages: VehicleImage[] = [
         },
     },
     {
-        url: "https://images.unsplash.com/photo-1617469767053-3c4f2a7c84e0",
+        url: "https://media.spyneai.com/unsafe/fit-in/828x0/filters:format(webp)/https://spyne-media.s3.amazonaws.com/2025-05-21/car_replace_bg_4c0ed53f-d0b6-485c-a3b0-9ef86615cf20.jpg",
         category: "interior",
         processing: "processed",
         ratio: "4:3",
@@ -216,7 +214,7 @@ const sampleImages: VehicleImage[] = [
     },
     // Toyota Camry
     {
-        url: "https://images.unsplash.com/photo-1617469767053-3c4f2a7c84e0",
+        url: "https://media.spyneai.com/unsafe/fit-in/828x0/filters:format(webp)/https://spyne-media.s3.amazonaws.com/2025-05-21/car_replace_bg_4c0ed53f-d0b6-485c-a3b0-9ef86615cf20.jpg",
         category: "exterior",
         processing: "processed",
         ratio: "16:9",
@@ -228,7 +226,7 @@ const sampleImages: VehicleImage[] = [
         },
     },
     {
-        url: "https://images.unsplash.com/photo-1617469767053-3c4f2a7c84e0",
+        url: "https://media.spyneai.com/unsafe/fit-in/828x0/filters:format(webp)/https://spyne-media.s3.amazonaws.com/2025-05-21/car_replace_bg_4c0ed53f-d0b6-485c-a3b0-9ef86615cf20.jpg",
         category: "interior",
         processing: "processed",
         ratio: "4:3",
@@ -241,7 +239,7 @@ const sampleImages: VehicleImage[] = [
     },
     // Ford F-150
     {
-        url: "https://images.unsplash.com/photo-1617469767053-3c4f2a7c84e0",
+        url: "https://media.spyneai.com/unsafe/fit-in/828x0/filters:format(webp)/https://spyne-media.s3.amazonaws.com/2025-05-21/car_replace_bg_4c0ed53f-d0b6-485c-a3b0-9ef86615cf20.jpg",
         category: "exterior",
         processing: "processed",
         ratio: "16:9",
@@ -253,7 +251,7 @@ const sampleImages: VehicleImage[] = [
         },
     },
     {
-        url: "https://images.unsplash.com/photo-1617469767053-3c4f2a7c84e0",
+        url: "https://media.spyneai.com/unsafe/fit-in/828x0/filters:format(webp)/https://spyne-media.s3.amazonaws.com/2025-05-21/car_replace_bg_4c0ed53f-d0b6-485c-a3b0-9ef86615cf20.jpg",
         category: "interior",
         processing: "processed",
         ratio: "4:3",
@@ -287,7 +285,7 @@ function findMatchingImages(settings: {
                 year: sampleData[currentIndex % sampleData.length].year
             };
         }
-        
+
         // Log the search criteria
         console.log("Searching for images with settings:", settings);
 
@@ -312,13 +310,13 @@ function findMatchingImages(settings: {
         });
 
         console.log(`Found ${matches.length} matching images`);
-        
+
         // If no exact matches, fall back to any image with matching category
         if (matches.length === 0) {
             console.log("No exact matches, falling back to category matches");
             return sampleImages.filter(img => img.category === settings.category);
         }
-        
+
         return matches;
     } catch (error) {
         console.error("Error in findMatchingImages:", error);
@@ -332,7 +330,7 @@ function getErrorMessage(error: unknown): string {
     return String(error);
 }
 
-// Helper function to create an image frame
+// Updated createImageFrame function that uses async node methods
 async function createImageFrame(
     node: FrameNode | RectangleNode,
     imageUrl: string,
@@ -418,88 +416,205 @@ async function createImageFrame(
         loadingText.x = (targetWidth - loadingText.width) / 2;
         loadingText.y = (targetHeight - loadingText.height) / 2;
 
+        // Save frame ID for later validation
+        const frameId = frameNode.id;
+
         // Create a promise to handle the image loading
         return new Promise((resolve) => {
             let hasResolved = false;
+            let timeoutId: number | null = null;
 
-            // Fixed: Using a properly typed UI message handler
-            const messageHandler = async (event: { data: { pluginMessage: { type: string; data?: Uint8Array; error?: string } } }) => {
-                const msg = event.data.pluginMessage;
+            // Message handler for image data
+            const messageHandler = async (msg: any) => {
+                try {
+                    // Validate message
+                    if (!msg || typeof msg.type !== 'string') {
+                        console.warn('Received malformed or undefined pluginMessage:', msg);
+                        return;
+                    }
 
-                if (msg.type === "IMAGE_DATA" && !hasResolved) {
-                    try {
-                        // Remove loading text
-                        loadingText.remove();
+                    console.log(`Received message of type: ${msg.type}`);
 
-                        if (!msg.data) {
-                            throw new Error("No image data received");
+                    if (msg.type === "IMAGE_DATA" && !hasResolved) {
+                        if (timeoutId !== null) {
+                            clearTimeout(timeoutId);
+                            timeoutId = null;
                         }
 
-                        // Convert array back to Uint8Array
-                        const imageData = new Uint8Array(msg.data);
-                        console.log(
-                            `Received image data of length: ${imageData.length}`
-                        );
+                        // Check if our frame node still exists - USING ASYNC VERSION
+                        try {
+                            const frameNodeStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
+                            if (!frameNodeStillExists) {
+                                console.error("Frame node no longer exists");
+                                hasResolved = true;
+                                resolve(false);
+                                return;
+                            }
 
-                        if (imageData.length === 0) {
-                            throw new Error("Received empty image data");
+                            // The node exists, now check for loading text nodes
+                            try {
+                                // Get all text nodes inside the frame
+                                for (const child of frameNodeStillExists.children) {
+                                    if (child.type === "TEXT" && child.characters === "Loading image...") {
+                                        child.remove();
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn("Couldn't remove loading text:", e);
+                                // Non-critical error, continue
+                            }
+
+                            // Proceed with image data
+                            if (!msg.data || !Array.isArray(msg.data) || msg.data.length === 0) {
+                                throw new Error("No valid image data received");
+                            }
+
+                            // Convert array back to Uint8Array
+                            const imageData = new Uint8Array(msg.data);
+                            console.log(`Received image data of length: ${imageData.length}`);
+
+                            try {
+                                // Create and apply image
+                                const image = await figma.createImage(imageData);
+
+                                // Check if frame still exists before setting fills
+                                const frameStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
+                                if (!frameStillExists) {
+                                    console.error("Frame no longer exists when setting image");
+                                    hasResolved = true;
+                                    resolve(false);
+                                    return;
+                                }
+
+                                frameStillExists.fills = [
+                                    {
+                                        type: "IMAGE",
+                                        imageHash: image.hash,
+                                        scaleMode: "FILL",
+                                        scalingFactor: 1,
+                                    },
+                                ];
+
+                                figma.notify("Image inserted successfully!", {
+                                    timeout: 2000,
+                                });
+
+                                figma.ui.postMessage({ type: "IMAGE_INSERTED" });
+
+                                hasResolved = true;
+                                resolve(true);
+
+                            } catch (imageError) {
+                                console.error("Error creating image:", imageError);
+                                const errorMsg = imageError instanceof Error ?
+                                    imageError.message : String(imageError);
+
+                                figma.notify(`Error creating image: ${errorMsg}`, { error: true });
+                                figma.ui.postMessage({
+                                    type: "IMAGE_ERROR",
+                                    error: errorMsg,
+                                });
+
+                                // Check if frame still exists before creating placeholder
+                                try {
+                                    const frameStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
+                                    if (frameStillExists) {
+                                        await createPlaceholder(
+                                            frameStillExists,
+                                            targetWidth,
+                                            targetHeight,
+                                            `Error: ${errorMsg}`
+                                        );
+                                    }
+                                } catch (e) {
+                                    console.error("Error creating placeholder:", e);
+                                }
+
+                                hasResolved = true;
+                                resolve(false);
+                            }
+                        } catch (nodeError) {
+                            console.error("Error accessing frame node:", nodeError);
+                            hasResolved = true;
+                            resolve(false);
+                        }
+                    }
+                    else if (msg.type === "IMAGE_ERROR" && !hasResolved) {
+                        if (timeoutId !== null) {
+                            clearTimeout(timeoutId);
+                            timeoutId = null;
                         }
 
-                        // Create and apply image
-                        const image = await figma.createImage(imageData);
-                        frameNode.fills = [
-                            {
-                                type: "IMAGE",
-                                imageHash: image.hash,
-                                scaleMode: "FILL",
-                                scalingFactor: 1,
-                            },
-                        ];
+                        // Check if our frame still exists
+                        try {
+                            const frameNodeStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
+                            if (frameNodeStillExists) {
+                                // Remove loading text if it exists
+                                for (const child of frameNodeStillExists.children) {
+                                    if (child.type === "TEXT" && child.characters === "Loading image...") {
+                                        child.remove();
+                                    }
+                                }
 
-                        figma.notify("Image inserted successfully!", {
-                            timeout: 2000,
-                        });
-                        figma.ui.postMessage({ type: "IMAGE_INSERTED" });
-                        hasResolved = true;
-                        resolve(true);
-                    } catch (error: unknown) {
-                        const errorMsg = getErrorMessage(error);
-                        console.error("Error processing image data:", errorMsg);
-                        figma.notify(`Error: ${errorMsg}`, { error: true });
-                        figma.ui.postMessage({
-                            type: "IMAGE_ERROR",
-                            error: errorMsg,
-                        });
-                        createPlaceholder(
-                            frameNode,
-                            targetWidth,
-                            targetHeight,
-                            `Error: ${errorMsg}`
-                        );
+                                const errorMsg = msg.error
+                                    ? String(msg.error)
+                                    : "Unknown error occurred";
+
+                                console.error("Failed to fetch image:", errorMsg);
+
+                                figma.notify(`Failed to fetch image: ${errorMsg}`, {
+                                    error: true,
+                                });
+
+                                await createPlaceholder(
+                                    frameNodeStillExists,
+                                    targetWidth,
+                                    targetHeight,
+                                    `Failed to fetch image: ${errorMsg}`
+                                );
+                            }
+                        } catch (nodeError) {
+                            console.error("Error accessing frame node:", nodeError);
+                        }
+
                         hasResolved = true;
                         resolve(false);
                     }
-                } else if (msg.type === "IMAGE_ERROR" && !hasResolved) {
-                    loadingText.remove();
-                    const errorMsg = msg.error
-                        ? String(msg.error)
-                        : "Unknown error occurred";
-                    console.error("Failed to fetch image:", errorMsg);
-                    figma.notify(`Failed to fetch image: ${errorMsg}`, {
-                        error: true,
-                    });
-                    figma.ui.postMessage({
-                        type: "IMAGE_ERROR",
-                        error: errorMsg,
-                    });
-                    createPlaceholder(
-                        frameNode,
-                        targetWidth,
-                        targetHeight,
-                        `Failed to fetch image: ${errorMsg}`
-                    );
-                    hasResolved = true;
-                    resolve(false);
+                } catch (handlerError) {
+                    console.error("Error in message handler:", handlerError);
+
+                    // Only handle if we haven't resolved yet
+                    if (!hasResolved) {
+                        try {
+                            // Check if our frame still exists
+                            const frameNodeStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
+                            if (frameNodeStillExists) {
+                                // Remove loading text if it exists
+                                for (const child of frameNodeStillExists.children) {
+                                    if (child.type === "TEXT" && child.characters === "Loading image...") {
+                                        child.remove();
+                                    }
+                                }
+
+                                const errorMsg = handlerError instanceof Error ?
+                                    handlerError.message : String(handlerError);
+
+                                figma.notify(`Error processing message: ${errorMsg}`, { error: true });
+
+                                await createPlaceholder(
+                                    frameNodeStillExists,
+                                    targetWidth,
+                                    targetHeight,
+                                    `Error: ${errorMsg}`
+                                );
+                            }
+                        } catch (nodeError) {
+                            console.error("Error accessing frame node:", nodeError);
+                        }
+
+                        hasResolved = true;
+                        resolve(false);
+                    }
                 }
             };
 
@@ -512,31 +627,49 @@ async function createImageFrame(
                 url: imageUrl,
             });
 
-            // Set timeout - increased for more reliability
-            setTimeout(() => {
+            // Set timeout
+            timeoutId = setTimeout(async () => {
                 if (!hasResolved) {
-                    loadingText.remove();
-                    const timeoutMsg = "Image loading timed out";
-                    console.error(timeoutMsg);
-                    figma.notify(timeoutMsg, { error: true });
-                    figma.ui.postMessage({
-                        type: "IMAGE_ERROR",
-                        error: timeoutMsg,
-                    });
-                    createPlaceholder(
-                        frameNode,
-                        targetWidth,
-                        targetHeight,
-                        "Image loading timed out. Please try again."
-                    );
+                    try {
+                        // Check if our frame still exists
+                        const frameNodeStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
+                        if (frameNodeStillExists) {
+                            // Remove loading text if it exists
+                            for (const child of frameNodeStillExists.children) {
+                                if (child.type === "TEXT" && child.characters === "Loading image...") {
+                                    child.remove();
+                                }
+                            }
+
+                            const timeoutMsg = "Image loading timed out";
+                            console.error(timeoutMsg);
+
+                            figma.notify(timeoutMsg, { error: true });
+
+                            figma.ui.postMessage({
+                                type: "IMAGE_ERROR",
+                                error: timeoutMsg,
+                            });
+
+                            await createPlaceholder(
+                                frameNodeStillExists,
+                                targetWidth,
+                                targetHeight,
+                                "Image loading timed out. Please try again."
+                            );
+                        }
+                    } catch (nodeError) {
+                        console.error("Error accessing frame node:", nodeError);
+                    }
+
                     hasResolved = true;
                     resolve(false);
                 }
                 figma.ui.off("message", messageHandler);
-            }, 60000); // Increased timeout to 60 seconds
+            }, 60000); // 60 second timeout
         });
     } catch (error: unknown) {
-        const errorMsg = getErrorMessage(error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
         console.error("Error in createImageFrame:", errorMsg);
         figma.notify(`Error in createImageFrame: ${errorMsg}`, { error: true });
         figma.ui.postMessage({ type: "IMAGE_ERROR", error: errorMsg });
@@ -544,7 +677,7 @@ async function createImageFrame(
     }
 }
 
-// Helper function to create placeholder for failed images
+// Make createPlaceholder async as well
 async function createPlaceholder(
     frameNode: FrameNode,
     width: number,
@@ -635,13 +768,11 @@ figma.ui.onmessage = async (msg: any) => {
             let message = "";
             if (successCount > 0 && failureCount === 0) {
                 const vehicleList = Array.from(updatedVehicles).join(", ");
-                message = `Updated ${successCount} layer${
-                    successCount > 1 ? "s" : ""
-                } with data from: ${vehicleList}`;
+                message = `Updated ${successCount} layer${successCount > 1 ? "s" : ""
+                    } with data from: ${vehicleList}`;
             } else if (successCount > 0 && failureCount > 0) {
-                message = `Updated ${successCount} layer${
-                    successCount > 1 ? "s" : ""
-                }, ${failureCount} failed`;
+                message = `Updated ${successCount} layer${successCount > 1 ? "s" : ""
+                    }, ${failureCount} failed`;
             } else {
                 message = "Failed to update any layers";
             }
@@ -652,7 +783,7 @@ figma.ui.onmessage = async (msg: any) => {
             console.error("Error updating text layers:", error);
             figma.notify(
                 "Error updating text layers: " +
-                    (error.message || "Unknown error")
+                (error.message || "Unknown error")
             );
         }
     } else if (msg.type === "INSERT_IMAGE") {
@@ -717,13 +848,11 @@ figma.ui.onmessage = async (msg: any) => {
             // Create notification message
             let message = "";
             if (successCount > 0 && failureCount === 0) {
-                message = `Updated ${successCount} frame${
-                    successCount > 1 ? "s" : ""
-                } with images`;
+                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""
+                    } with images`;
             } else if (successCount > 0 && failureCount > 0) {
-                message = `Updated ${successCount} frame${
-                    successCount > 1 ? "s" : ""
-                }, ${failureCount} failed`;
+                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""
+                    }, ${failureCount} failed`;
             } else {
                 message = "Failed to update any frames";
             }
