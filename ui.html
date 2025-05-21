@@ -20,6 +20,8 @@
 
     .section {
       margin-bottom: 24px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 16px;
     }
 
     button {
@@ -48,7 +50,7 @@
       margin-top: 24px;
     }
 
-    select {
+    select, input {
       width: 100%;
       padding: 8px;
       margin-bottom: 12px;
@@ -78,10 +80,100 @@
       background-color: #FFE8E8;
       color: #D62828;
     }
+
+    .data-status {
+      padding: 8px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .data-loaded {
+      background-color: #E3F8EC;
+      color: #1B8555;
+    }
+
+    .data-error {
+      background-color: #FFE8E8;
+      color: #D62828;
+    }
+
+    .data-waiting {
+      background-color: #FFF3E0;
+      color: #E65100;
+    }
+
+    /* Chip styles */
+    .chip-group {
+      margin-bottom: 16px;
+    }
+
+    .chip-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 6px 12px;
+      background-color: #f0f0f0;
+      border-radius: 16px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      transition: all 0.2s ease;
+    }
+
+    .chip:hover {
+      background-color: #e6e6e6;
+    }
+
+    .chip.selected {
+      background-color: #18A0FB;
+      color: white;
+      border-color: #18A0FB;
+    }
+
+    .download-link {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #18A0FB;
+      text-decoration: none;
+    }
+
+    .download-link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 
 <body>
+  <div class="section">
+    <h2>Google Sheet Configuration</h2>
+    <div>
+      <label for="sheet-id">Google Sheet ID</label>
+      <input type="text" id="sheet-id" placeholder="Enter Sheet ID from URL">
+      <small style="display: block; margin-bottom: 8px; font-size: 10px;">
+        Example: from https://docs.google.com/spreadsheets/d/1A2B3C4D5E6F7G8H9I/edit, the ID is 1A2B3C4D5E6F7G8H9I
+      </small>
+
+      <label for="sheet-name">Sheet Name</label>
+      <input type="text" id="sheet-name" placeholder="Sheet1" value="Sheet1">
+
+      <button id="save-sheet-config">Save & Load Data</button>
+      <div>
+        <a href="#" id="download-template" class="download-link">Download Sample Template</a>
+      </div>
+    </div>
+
+    <div id="data-status-container" class="data-status data-waiting">
+      No vehicle data loaded. Please configure Google Sheet.
+    </div>
+  </div>
+
   <div class="section">
     <h2>Insert Vehicle Data</h2>
     <div class="grid">
@@ -109,27 +201,44 @@
     <h2>Insert Vehicle Images</h2>
 
     <div>
-      <label for="category">Image Category</label>
-      <select id="category">
-        <option value="exterior">Exterior</option>
-        <option value="interior">Interior</option>
-      </select>
+      <!-- Category Chips -->
+      <div class="chip-group">
+        <label>Image Category</label>
+        <div class="chip-container" id="category-chips">
+          <div class="chip selected" data-value="exterior">Exterior</div>
+          <div class="chip" data-value="interior">Interior</div>
+        </div>
+      </div>
 
-      <label for="processing">Processing Type</label>
-      <select id="processing">
-        <option value="processed">Processed</option>
-      </select>
+      <!-- Processing Type Chips -->
+      <div class="chip-group">
+        <label>Processing Type</label>
+        <div class="chip-container" id="processing-chips">
+          <div class="chip selected" data-value="processed">Processed</div>
+          <div class="chip" data-value="raw">Raw</div>
+        </div>
+      </div>
 
-      <label for="ratio">Aspect Ratio</label>
-      <select id="ratio">
-        <option value="16:9">16:9</option>
-        <option value="4:3">4:3</option>
-      </select>
+      <!-- Aspect Ratio Chips -->
+      <div class="chip-group">
+        <label>Aspect Ratio</label>
+        <div class="chip-container" id="ratio-chips">
+          <div class="chip selected" data-value="16:9">16:9</div>
+          <div class="chip" data-value="4:3">4:3</div>
+          <div class="chip" data-value="1:1">1:1</div>
+        </div>
+      </div>
 
-      <label for="angle">Angle</label>
-      <select id="angle">
-        <option value="front">Front</option>
-      </select>
+      <!-- Angle Chips -->
+      <div class="chip-group">
+        <label>Angle</label>
+        <div class="chip-container" id="angle-chips">
+          <div class="chip selected" data-value="front">Front</div>
+          <div class="chip" data-value="side">Side</div>
+          <div class="chip" data-value="rear">Rear</div>
+          <div class="chip" data-value="interior">Interior</div>
+        </div>
+      </div>
 
       <button id="insert-image">Insert Vehicle Image</button>
     </div>
@@ -138,6 +247,18 @@
   </div>
 
   <script>
+    // Sample CSV template for download
+    const sampleCSV = `vin,make,model,year,price,body_type,trim,engine,transmission,fuel_type,mileage,exterior_color,interior_color,drivetrain,features
+1HGCM82633A123456,Honda,Accord,2023,$32000,Sedan,Sport,1.5L Turbo 4-Cylinder,CVT,Gasoline,32 City / 38 Hwy,Sonic Gray Pearl,Black Leather,FWD,"Apple CarPlay, Android Auto, Lane Departure Warning"
+5TDZA23C13S012345,Toyota,Camry,2023,$30000,Sedan,XSE,2.5L 4-Cylinder,8-Speed Automatic,Gasoline,28 City / 39 Hwy,Wind Chill Pearl,Red Leather,FWD,"Panoramic Roof, JBL Audio, Wireless Charging"
+1FTEW1E53JFB12345,Ford,F-150,2023,$45000,Truck,Lariat,3.5L EcoBoost V6,10-Speed Automatic,Gasoline,20 City / 26 Hwy,Rapid Red,Black/Brown Leather,4WD,"Pro Trailer Backup Assist, 360-Degree Camera, Power Tailgate"`;
+
+    // Initialize chip selection variables
+    let selectedCategory = 'exterior';
+    let selectedProcessing = 'processed';
+    let selectedRatio = '16:9';
+    let selectedAngle = 'front';
+
     // Initialize message passing with Figma
     onmessage = (event) => {
       const msg = event.data.pluginMessage;
@@ -149,6 +270,90 @@
 
       handlePluginMessage(msg);
     };
+
+    // Initialize sheet config variables
+    let sheetId = '';
+    let sheetName = 'Sheet1';
+    let vehicleData = [];
+    let isDataLoaded = false;
+
+    // Initialize form fields
+    document.getElementById('sheet-id').value = sheetId;
+    document.getElementById('sheet-name').value = sheetName;
+
+    // Set up chip functionality
+    setupChips('category-chips', (value) => { selectedCategory = value; });
+    setupChips('processing-chips', (value) => { selectedProcessing = value; });
+    setupChips('ratio-chips', (value) => { selectedRatio = value; });
+    setupChips('angle-chips', (value) => { selectedAngle = value; });
+
+    // Function to handle chip selection
+    function setupChips(containerId, callback) {
+      const container = document.getElementById(containerId);
+      const chips = container.querySelectorAll('.chip');
+      
+      chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          // Remove selected class from all chips in this container
+          chips.forEach(c => c.classList.remove('selected'));
+          
+          // Add selected class to clicked chip
+          chip.classList.add('selected');
+          
+          // Call the callback with the selected value
+          callback(chip.getAttribute('data-value'));
+        });
+      });
+    }
+
+    // Set up download template link
+    document.getElementById('download-template').addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      // Create a blob from the sample CSV data
+      const blob = new Blob([sampleCSV], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create a temporary link and trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'vehicle_data_template.csv';
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
+    });
+
+    // Add event listener to sheet config button
+    document.getElementById('save-sheet-config').addEventListener('click', () => {
+      const newSheetId = document.getElementById('sheet-id').value.trim();
+      const newSheetName = document.getElementById('sheet-name').value.trim() || 'Sheet1';
+
+      if (!newSheetId) {
+        showDataStatus('Please enter a valid Google Sheet ID', 'error');
+        return;
+      }
+
+      sheetId = newSheetId;
+      sheetName = newSheetName;
+
+      // Send config to plugin
+      parent.postMessage({
+        pluginMessage: {
+          type: 'UPDATE_SHEET_CONFIG',
+          payload: {
+            sheetId: sheetId,
+            sheetName: sheetName
+          }
+        }
+      }, '*');
+
+      showDataStatus('Connecting to Google Sheet...', 'waiting');
+    });
 
     // Add event listeners to data buttons
     document.querySelectorAll('.grid button').forEach(button => {
@@ -167,15 +372,15 @@
 
     // Add event listener to image button
     document.getElementById('insert-image').addEventListener('click', () => {
-      const category = document.getElementById('category').value;
-      const processing = document.getElementById('processing').value;
-      const ratio = document.getElementById('ratio').value;
-      const angle = document.getElementById('angle').value;
-
       parent.postMessage({
         pluginMessage: {
           type: 'INSERT_IMAGE',
-          payload: { category, processing, ratio, angle }
+          payload: { 
+            category: selectedCategory,
+            processing: selectedProcessing,
+            ratio: selectedRatio,
+            angle: selectedAngle
+          }
         }
       }, '*');
 
@@ -187,6 +392,26 @@
       console.log('Processing message:', message.type);
 
       switch (message.type) {
+        case 'FETCH_SHEET_DATA':
+          // Handle request to fetch Google Sheet data
+          fetchSheetData(message.payload.url);
+          break;
+
+        case 'UPDATE_SHEET_CONFIG':
+          // Update UI with sheet config from plugin
+          if (message.payload) {
+            sheetId = message.payload.sheetId || '';
+            sheetName = message.payload.sheetName || 'Sheet1';
+            
+            document.getElementById('sheet-id').value = sheetId;
+            document.getElementById('sheet-name').value = sheetName;
+            
+            if (sheetId) {
+              showDataStatus('Configuration loaded. Fetching data...', 'waiting');
+            }
+          }
+          break;
+
         case 'FETCH_IMAGE':
           // Always use the Image element method as it converts WebP to PNG
           fetchImageWithCanvas(message.url);
@@ -200,6 +425,116 @@
           showStatus(`Error: ${message.error || 'Unknown error'}`, 'error');
           break;
       }
+    }
+
+    // Function to fetch Google Sheet data
+    async function fetchSheetData(url) {
+      showDataStatus('Fetching data from Google Sheet...', 'waiting');
+      console.log('Fetching data from URL:', url);
+
+      try {
+        // Fetch the CSV data
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch sheet: ${response.status} ${response.statusText}`);
+        }
+
+        const csvData = await response.text();
+        console.log('CSV data received:', csvData.substring(0, 100) + '...');
+
+        // Parse CSV data
+        const parsedData = parseCSV(csvData);
+        
+        // Send the parsed data back to the plugin
+        parent.postMessage({
+          pluginMessage: {
+            type: 'SHEET_DATA_RESULT',
+            data: parsedData
+          }
+        }, '*');
+
+        // Update UI
+        vehicleData = parsedData;
+        isDataLoaded = true;
+        showDataStatus(`Loaded ${parsedData.length} vehicle entries from Google Sheet`, 'loaded');
+
+      } catch (error) {
+        console.error('Error fetching sheet data:', error);
+        showDataStatus(`Error loading data: ${error.message}`, 'error');
+        
+        parent.postMessage({
+          pluginMessage: {
+            type: 'SHEET_DATA_RESULT',
+            error: error.message
+          }
+        }, '*');
+      }
+    }
+
+    // Function to parse CSV data
+    function parseCSV(csvData) {
+      // Split by lines
+      const lines = csvData.split('\n');
+      
+      // Get headers (first line)
+      const headers = lines[0].split(',').map(header => 
+        header.trim().replace(/^"(.*)"$/, '$1').toLowerCase().replace(/\s+/g, '_')
+      );
+      
+      // Parse rows
+      const result = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue; // Skip empty lines
+        
+        // Handle quoted values with commas inside them
+        const row = {};
+        let inQuote = false;
+        let currentValue = '';
+        let currentField = 0;
+        
+        for (let j = 0; j < lines[i].length; j++) {
+          const char = lines[i][j];
+          
+          if (char === '"' && (j === 0 || lines[i][j-1] !== '\\')) {
+            inQuote = !inQuote;
+          } else if (char === ',' && !inQuote) {
+            // End of field
+            if (currentField < headers.length) {
+              // Clean the value
+              let cleanValue = currentValue.trim().replace(/^"(.*)"$/, '$1');
+              
+              // Handle features specially - convert to array if that field exists
+              if (headers[currentField] === 'features' && cleanValue) {
+                row[headers[currentField]] = cleanValue.split(',').map(f => f.trim());
+              } else {
+                row[headers[currentField]] = cleanValue;
+              }
+            }
+            
+            currentValue = '';
+            currentField++;
+          } else {
+            currentValue += char;
+          }
+        }
+        
+        // Handle the last field
+        if (currentField < headers.length) {
+          let cleanValue = currentValue.trim().replace(/^"(.*)"$/, '$1');
+          
+          if (headers[currentField] === 'features' && cleanValue) {
+            row[headers[currentField]] = cleanValue.split(',').map(f => f.trim());
+          } else {
+            row[headers[currentField]] = cleanValue;
+          }
+        }
+        
+        result.push(row);
+      }
+      
+      return result;
     }
 
     // This is the only image fetching method we'll use - it handles format conversion
@@ -303,6 +638,24 @@
         setTimeout(() => {
           statusDiv.remove();
         }, 5000);
+      }
+    }
+
+    // Helper to show data status
+    function showDataStatus(message, type) {
+      console.log(`Data status: ${message}`);
+
+      const statusContainer = document.getElementById('data-status-container');
+      statusContainer.textContent = message;
+      
+      // Update class based on type
+      statusContainer.className = 'data-status';
+      if (type === 'loaded') {
+        statusContainer.classList.add('data-loaded');
+      } else if (type === 'error') {
+        statusContainer.classList.add('data-error');
+      } else {
+        statusContainer.classList.add('data-waiting');
       }
     }
   </script>
