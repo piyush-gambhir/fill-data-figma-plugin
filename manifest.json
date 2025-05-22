@@ -1,5 +1,5 @@
 {
-  "name": "Spyne vehicle info",
+  "name": "Fill Data - Figma Plugin",
   "id": "1507041004795307230",
   "api": "1.0.0",
   "main": "code.js",
@@ -11,7 +11,8 @@
   "networkAccess": {
     "allowedDomains": [
       "https://media.spyneai.com",
-      "https://docs.google.com"
+      "https://docs.google.com",
+      "https://api.allorigins.win"
     ]
   }
 }

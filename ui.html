@@ -433,8 +433,19 @@
       console.log('Fetching data from URL:', url);
 
       try {
+        // Use a different CORS proxy
+        const corsProxyUrl = 'https://api.allorigins.win/raw?url=';
+        const proxyUrl = corsProxyUrl + encodeURIComponent(url);
+        
+        console.log('Using proxy URL:', proxyUrl);
+        
         // Fetch the CSV data
-        const response = await fetch(url);
+        const response = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'text/csv'
+          }
+        });
         
         if (!response.ok) {
           throw new Error(`Failed to fetch sheet: ${response.status} ${response.statusText}`);
