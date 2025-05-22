@@ -11,17 +11,26 @@
       margin: 0;
       padding: 16px;
       color: #333;
+      background-color: #fafafa;
+      overflow-x: hidden;
     }
 
     h2 {
       margin-top: 0;
       font-size: 16px;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 16px;
     }
 
     .section {
       margin-bottom: 24px;
       border-bottom: 1px solid #eee;
       padding-bottom: 16px;
+      background-color: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
     button {
@@ -29,11 +38,12 @@
       color: white;
       border: none;
       border-radius: 6px;
-      padding: 8px 16px;
+      padding: 10px 16px;
       font-size: 14px;
       cursor: pointer;
       margin-bottom: 8px;
       margin-right: 8px;
+      transition: background-color 0.2s;
     }
 
     button:hover {
@@ -52,55 +62,72 @@
 
     select, input {
       width: 100%;
-      padding: 8px;
+      padding: 10px;
       margin-bottom: 12px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      background-color: #fcfcfc;
+      box-sizing: border-box;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: #18A0FB;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(24, 160, 251, 0.2);
     }
 
     label {
       display: block;
-      margin-bottom: 4px;
-      font-size: 12px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #555;
     }
 
     .status {
       margin-top: 16px;
-      padding: 8px;
-      border-radius: 4px;
-      font-size: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
     }
 
     .success {
       background-color: #E3F8EC;
       color: #1B8555;
+      border-left: 4px solid #1B8555;
     }
 
     .error {
       background-color: #FFE8E8;
       color: #D62828;
+      border-left: 4px solid #D62828;
     }
 
     .data-status {
-      padding: 8px;
-      margin-bottom: 12px;
-      border-radius: 4px;
-      font-size: 12px;
+      padding: 12px;
+      margin-top: 16px;
+      border-radius: 6px;
+      font-size: 13px;
     }
 
     .data-loaded {
       background-color: #E3F8EC;
       color: #1B8555;
+      border-left: 4px solid #1B8555;
     }
 
     .data-error {
       background-color: #FFE8E8;
       color: #D62828;
+      border-left: 4px solid #D62828;
     }
 
     .data-waiting {
       background-color: #FFF3E0;
       color: #E65100;
+      border-left: 4px solid #E65100;
     }
 
     /* Chip styles */
@@ -110,20 +137,23 @@
 
     .chip-container {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 8px;
       margin-bottom: 12px;
+      overflow-x: auto;
+      padding-bottom: 4px;
     }
 
     .chip {
       display: inline-block;
-      padding: 6px 12px;
+      padding: 8px 14px;
       background-color: #f0f0f0;
-      border-radius: 16px;
-      font-size: 12px;
+      border-radius: 20px;
+      font-size: 13px;
       cursor: pointer;
       border: 1px solid #ddd;
       transition: all 0.2s ease;
+      white-space: nowrap;
     }
 
     .chip:hover {
@@ -134,18 +164,47 @@
       background-color: #18A0FB;
       color: white;
       border-color: #18A0FB;
+      font-weight: 500;
     }
 
     .download-link {
       display: inline-block;
       margin-top: 8px;
-      font-size: 12px;
+      font-size: 13px;
       color: #18A0FB;
       text-decoration: none;
     }
 
     .download-link:hover {
       text-decoration: underline;
+    }
+
+    .info-text {
+      font-size: 12px;
+      color: #777;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+
+    ::-webkit-scrollbar {
+      height: 4px;
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #999;
     }
   </style>
 </head>
@@ -154,11 +213,11 @@
   <div class="section">
     <h2>Google Sheet Configuration</h2>
     <div>
-      <label for="sheet-id">Google Sheet ID</label>
-      <input type="text" id="sheet-id" placeholder="Enter Sheet ID from URL">
-      <small style="display: block; margin-bottom: 8px; font-size: 10px;">
-        Example: from https://docs.google.com/spreadsheets/d/1A2B3C4D5E6F7G8H9I/edit, the ID is 1A2B3C4D5E6F7G8H9I
-      </small>
+      <label for="sheet-url">Google Sheet URL</label>
+      <input type="text" id="sheet-url" placeholder="Paste your Google Sheet link here">
+      <p class="info-text">
+        Example: docs.google.com/spreadsheets/d/1A2B3...
+      </p>
 
       <label for="sheet-name">Sheet Name</label>
       <input type="text" id="sheet-name" placeholder="Sheet1" value="Sheet1">
@@ -277,9 +336,17 @@
     let vehicleData = [];
     let isDataLoaded = false;
 
-    // Initialize form fields
-    document.getElementById('sheet-id').value = sheetId;
-    document.getElementById('sheet-name').value = sheetName;
+    // Function to extract sheet ID from URL
+    function extractSheetId(url) {
+      if (!url) return '';
+      
+      // Match pattern /d/SHEET_ID/edit or /spreadsheets/d/SHEET_ID/edit
+      const match = url.match(/\/d\/([a-zA-Z0-9-_]+)(?:\/|$)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+      return '';
+    }
 
     // Set up chip functionality
     setupChips('category-chips', (value) => { selectedCategory = value; });
@@ -330,11 +397,12 @@
 
     // Add event listener to sheet config button
     document.getElementById('save-sheet-config').addEventListener('click', () => {
-      const newSheetId = document.getElementById('sheet-id').value.trim();
+      const sheetUrl = document.getElementById('sheet-url').value.trim();
+      const newSheetId = extractSheetId(sheetUrl);
       const newSheetName = document.getElementById('sheet-name').value.trim() || 'Sheet1';
 
       if (!newSheetId) {
-        showDataStatus('Please enter a valid Google Sheet ID', 'error');
+        showDataStatus('Please enter a valid Google Sheet URL', 'error');
         return;
       }
 
@@ -403,7 +471,7 @@
             sheetId = message.payload.sheetId || '';
             sheetName = message.payload.sheetName || 'Sheet1';
             
-            document.getElementById('sheet-id').value = sheetId;
+            document.getElementById('sheet-url').placeholder = 'Google Sheet URL';
             document.getElementById('sheet-name').value = sheetName;
             
             if (sheetId) {

@@ -1,4 +1,4 @@
-figma.showUI(__html__, { width: 400, height: 700 });
+figma.showUI(__html__, { width: 420, height: 750 });
 
 interface VehicleEntry {
     vin: string;
