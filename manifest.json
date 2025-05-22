@@ -1,5 +1,5 @@
 {
-  "name": "Spyne vehicle info",
+  "name": "Fill Vehicle Data",
   "id": "1507041004795307230",
   "api": "1.0.0",
   "main": "code.js",
@@ -10,7 +10,9 @@
   "editorType": ["figma", "figjam", "slides"],
   "networkAccess": {
     "allowedDomains": [
-      "https://media.spyneai.com"
+      "https://media.spyneai.com",
+      "https://docs.google.com",
+      "https://api.allorigins.win"
     ]
   }
 }

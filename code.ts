@@ -1,4 +1,4 @@
-figma.showUI(__html__, { width: 400, height: 700 });
+figma.showUI(__html__, { width: 420, height: 750 });
 
 interface VehicleEntry {
     vin: string;
@@ -16,67 +16,33 @@ interface VehicleEntry {
     interior_color: string;
     drivetrain: string;
     features: string[];
+    front_0_url?: string;
+    front_left_45_url?: string;
+    left_90_url?: string;
+    rear_left_135_url?: string;
+    rear_180_url?: string;
+    rear_right_225_url?: string;
+    right_270_url?: string;
+    front_right_315_url?: string;
 }
 
-const sampleData: VehicleEntry[] = [
-    {
-        vin: "1HGCM82633A123456",
-        make: "Honda",
-        model: "Accord",
-        year: "2023",
-        price: "$32,000",
-        body_type: "Sedan",
-        trim: "Sport",
-        engine: "1.5L Turbo 4-Cylinder",
-        transmission: "CVT",
-        fuel_type: "Gasoline",
-        mileage: "32 City / 38 Hwy",
-        exterior_color: "Sonic Gray Pearl",
-        interior_color: "Black Leather",
-        drivetrain: "FWD",
-        features: ["Apple CarPlay", "Android Auto", "Lane Departure Warning"],
-    },
-    {
-        vin: "5TDZA23C13S012345",
-        make: "Toyota",
-        model: "Camry",
-        year: "2023",
-        price: "$30,000",
-        body_type: "Sedan",
-        trim: "XSE",
-        engine: "2.5L 4-Cylinder",
-        transmission: "8-Speed Automatic",
-        fuel_type: "Gasoline",
-        mileage: "28 City / 39 Hwy",
-        exterior_color: "Wind Chill Pearl",
-        interior_color: "Red Leather",
-        drivetrain: "FWD",
-        features: ["Panoramic Roof", "JBL Audio", "Wireless Charging"],
-    },
-    {
-        vin: "1FTEW1E53JFB12345",
-        make: "Ford",
-        model: "F-150",
-        year: "2023",
-        price: "$45,000",
-        body_type: "Truck",
-        trim: "Lariat",
-        engine: "3.5L EcoBoost V6",
-        transmission: "10-Speed Automatic",
-        fuel_type: "Gasoline",
-        mileage: "20 City / 26 Hwy",
-        exterior_color: "Rapid Red",
-        interior_color: "Black/Brown Leather",
-        drivetrain: "4WD",
-        features: [
-            "Pro Trailer Backup Assist",
-            "360-Degree Camera",
-            "Power Tailgate",
-        ],
-    },
-];
+// Configuration for Google Sheet
+interface SheetConfig {
+    sheetId: string;
+    sheetName: string;
+    apiKey?: string; // Optional API key if using Google Sheets API instead of public CSV
+}
 
+// Default configuration (can be updated from UI)
+let sheetConfig: SheetConfig = {
+    sheetId: "",
+    sheetName: "Sheet1"
+};
+
+// Store fetched vehicle data
+let vehicleData: VehicleEntry[] = [];
 let currentIndex = 0;
+let isDataLoaded = false;
 
 // Helper function to get system fonts
 async function getSystemFonts(): Promise<FontName[]> {
@@ -88,34 +54,83 @@ async function getSystemFonts(): Promise<FontName[]> {
     return systemFonts;
 }
 
+// Function to fetch data from Google Sheet
+async function fetchSheetData(config: SheetConfig): Promise<VehicleEntry[]> {
+    try {
+        if (!config.sheetId) {
+            throw new Error("Sheet ID is required");
+        }
+
+        // Construct the URL to fetch CSV data from public Google Sheet
+        const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(config.sheetName)}`;
+        
+        // Send request to UI to fetch data
+        return new Promise((resolve, reject) => {
+            figma.ui.postMessage({
+                type: "FETCH_SHEET_DATA",
+                payload: {
+                    url
+                }
+            });
+
+            // Handler for sheet data response
+            const messageHandler = (msg: {type: string; error?: string; data?: VehicleEntry[]}) => {
+                if (msg.type === "SHEET_DATA_RESULT") {
+                    figma.ui.off("message", messageHandler);
+                    
+                    if (msg.error) {
+                        reject(new Error(msg.error));
+                    } else {
+                        resolve(msg.data || []);
+                    }
+                }
+            };
+
+            figma.ui.on("message", messageHandler);
+        });
+    } catch (error) {
+        console.error("Error fetching sheet data:", error);
+        throw error;
+    }
+}
+
 // Helper function to get data for a specific index
 function getVehicleData(index: number, field: string) {
-    const entry = sampleData[index % sampleData.length];
+    // Return placeholder if data not loaded
+    if (!isDataLoaded || vehicleData.length === 0) {
+        return {
+            value: "Loading...",
+            vehicleInfo: "Loading vehicle data..."
+        };
+    }
+
+    const entry = vehicleData[index % vehicleData.length];
     const dummy = {
-        vin: entry.vin,
-        year: entry.year,
-        make: entry.make,
-        model: entry.model,
-        trim: entry.trim,
-        price: entry.price,
-        body_type: entry.body_type,
-        engine: entry.engine,
-        transmission: entry.transmission,
-        fuel_type: entry.fuel_type,
-        mileage: entry.mileage,
-        exterior_color: entry.exterior_color,
-        interior_color: entry.interior_color,
-        drivetrain: entry.drivetrain,
-        features: entry.features.join(", "),
-        fullname: `${entry.year} ${entry.make} ${entry.model} ${entry.trim}`,
-        full_specs: `${entry.year} ${entry.make} ${entry.model} ${entry.trim
-            }\n${entry.engine} | ${entry.transmission} | ${entry.drivetrain}\n${entry.exterior_color
-            } | ${entry.interior_color}\n${entry.features.join(", ")}`,
+        vin: entry.vin || "N/A",
+        year: entry.year || "N/A",
+        make: entry.make || "N/A",
+        model: entry.model || "N/A",
+        trim: entry.trim || "N/A",
+        price: entry.price || "N/A",
+        body_type: entry.body_type || "N/A",
+        engine: entry.engine || "N/A",
+        transmission: entry.transmission || "N/A",
+        fuel_type: entry.fuel_type || "N/A",
+        mileage: entry.mileage || "N/A",
+        exterior_color: entry.exterior_color || "N/A",
+        interior_color: entry.interior_color || "N/A",
+        drivetrain: entry.drivetrain || "N/A",
+        features: Array.isArray(entry.features) ? entry.features.join(", ") : "N/A",
+        fullname: `${entry.year || ""} ${entry.make || ""} ${entry.model || ""} ${entry.trim || ""}`.trim(),
+        full_specs: `${entry.year || ""} ${entry.make || ""} ${entry.model || ""} ${entry.trim || ""}
+${entry.engine || "N/A"} | ${entry.transmission || "N/A"} | ${entry.drivetrain || "N/A"}
+${entry.exterior_color || "N/A"} | ${entry.interior_color || "N/A"}
+${Array.isArray(entry.features) ? entry.features.join(", ") : "N/A"}`.trim(),
     };
 
     return {
-        value: dummy[field as keyof typeof dummy],
-        vehicleInfo: `${entry.year} ${entry.make} ${entry.model}`,
+        value: dummy[field as keyof typeof dummy] || "N/A",
+        vehicleInfo: `${entry.year || ""} ${entry.make || ""} ${entry.model || ""}`.trim() || "Vehicle Info N/A",
     };
 }
 
@@ -278,11 +293,12 @@ function findMatchingImages(settings: {
 }): VehicleImage[] {
     try {
         // If no vehicle info provided, use the current vehicle
-        if (!settings.vehicle) {
+        if (!settings.vehicle && vehicleData.length > 0) {
+            const currentVehicle = vehicleData[currentIndex % vehicleData.length];
             settings.vehicle = {
-                make: sampleData[currentIndex % sampleData.length].make,
-                model: sampleData[currentIndex % sampleData.length].model,
-                year: sampleData[currentIndex % sampleData.length].year
+                make: currentVehicle.make,
+                model: currentVehicle.model,
+                year: currentVehicle.year
             };
         }
 
@@ -325,7 +341,7 @@ function findMatchingImages(settings: {
 }
 
 // Helper function to get error message
-function getErrorMessage(error: unknown): string {
+function _getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
     return String(error);
 }
@@ -716,6 +732,73 @@ async function createPlaceholder(
     }
 }
 
+// Function to get the appropriate URL based on angle and processing type
+function getAngleUrl(vehicle: VehicleEntry, angle: string, _processing: string): string | null {
+    // Map angle to the corresponding URL property
+    const angleToPropertyMap: Record<string, keyof VehicleEntry> = {
+        "front": "front_0_url",
+        "front_left": "front_left_45_url",
+        "left": "left_90_url",
+        "rear_left": "rear_left_135_url",
+        "rear": "rear_180_url",
+        "rear_right": "rear_right_225_url",
+        "right": "right_270_url",
+        "front_right": "front_right_315_url"
+    };
+    
+    const urlProperty = angleToPropertyMap[angle];
+    if (urlProperty && vehicle[urlProperty]) {
+        // If we have explicit URLs in the CSV, we'll use them
+        // We can extend the data model in the future to support both raw and processed URLs
+        return vehicle[urlProperty] as string;
+    }
+    return null;
+}
+
+// Initialize by loading data from Google Sheet if available
+async function initializePlugin() {
+    try {
+        // First check if we have stored config
+        const storedConfig = await figma.clientStorage.getAsync('sheetConfig');
+        if (storedConfig) {
+            sheetConfig = JSON.parse(storedConfig as string);
+            figma.ui.postMessage({ 
+                type: "UPDATE_SHEET_CONFIG", 
+                payload: sheetConfig 
+            });
+        }
+        
+        // Try to load data if we have a sheet ID
+        if (sheetConfig.sheetId) {
+            figma.notify("Loading vehicle data from Google Sheet...");
+            
+            try {
+                const data = await fetchSheetData(sheetConfig);
+                vehicleData = data;
+                isDataLoaded = true;
+                
+                figma.notify(`Loaded ${vehicleData.length} vehicle entries from Google Sheet`);
+            } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                figma.notify(`Error loading sheet data: ${errorMsg}`, { error: true });
+                
+                // Initialize with empty array
+                vehicleData = [];
+                isDataLoaded = false;
+            }
+        } else {
+            figma.notify("Please configure Google Sheet settings to load vehicle data");
+        }
+    } catch (error) {
+        console.error("Error initializing plugin:", error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        figma.notify(`Error initializing plugin: ${errorMsg}`, { error: true });
+    }
+}
+
+// Call initialize on startup
+initializePlugin();
+
 figma.ui.onmessage = async (msg: any) => {
     if (msg.type === "INSERT_FIELD") {
         const { field } = msg.payload;
@@ -735,6 +818,12 @@ figma.ui.onmessage = async (msg: any) => {
         }
 
         try {
+            // Check if data is loaded
+            if (!isDataLoaded || vehicleData.length === 0) {
+                figma.notify("No vehicle data loaded. Please configure Google Sheet settings.");
+                return;
+            }
+
             // Track success and failures
             let successCount = 0;
             let failureCount = 0;
@@ -743,7 +832,7 @@ figma.ui.onmessage = async (msg: any) => {
             // Update each text node with different vehicle data
             for (let i = 0; i < textNodes.length; i++) {
                 const node = textNodes[i];
-                const dataIndex = (currentIndex + i) % sampleData.length;
+                const dataIndex = (currentIndex + i) % vehicleData.length;
                 const { value, vehicleInfo } = getVehicleData(dataIndex, field);
 
                 const valueToInsert =
@@ -762,7 +851,7 @@ figma.ui.onmessage = async (msg: any) => {
 
             // Update the current index to the next unused vehicle
             currentIndex =
-                (currentIndex + textNodes.length) % sampleData.length;
+                (currentIndex + textNodes.length) % vehicleData.length;
 
             // Create notification message
             let message = "";
@@ -787,7 +876,7 @@ figma.ui.onmessage = async (msg: any) => {
             );
         }
     } else if (msg.type === "INSERT_IMAGE") {
-        const { category, processing, ratio, angle } = msg.payload;
+        const { category, processing, ratio, angle, vinIndices } = msg.payload;
         const selectedNodes = figma.currentPage.selection;
 
         // Check for selection
@@ -807,54 +896,121 @@ figma.ui.onmessage = async (msg: any) => {
         }
 
         try {
-            // Find matching images
-            const matchingImages = findMatchingImages({
-                category,
-                processing,
-                ratio,
-                angle,
-                vehicle: sampleData[currentIndex % sampleData.length],
-            });
-
-            if (matchingImages.length === 0) {
-                figma.notify(
-                    "No matching images found for the selected criteria"
-                );
-                return;
+            // Check if data is loaded for vehicle info
+            if (!isDataLoaded || vehicleData.length === 0) {
+                figma.notify("Warning: Using sample images as no vehicle data is loaded.");
             }
 
             // Track success and failures
             let successCount = 0;
             let failureCount = 0;
+            
+            // If vinIndices is provided, use those specific vehicles
+            let vehiclesToUse: VehicleEntry[] = [];
+            if (vinIndices && vinIndices.length > 0) {
+                vehiclesToUse = vinIndices.map((index: number) => vehicleData[index]);
+            } else if (vehicleData.length > 0) {
+                // Otherwise use the current index vehicle
+                vehiclesToUse = [vehicleData[currentIndex % vehicleData.length]];
+            }
 
-            // Update each frame/rectangle with an image
-            for (let i = 0; i < validNodes.length; i++) {
-                const node = validNodes[i];
-                const imageData = matchingImages[i % matchingImages.length];
+            // If no specific vehicles or no data, use sample images
+            if (vehiclesToUse.length === 0) {
+                // Find matching sample images
+                const matchingImages = findMatchingImages({
+                    category,
+                    processing,
+                    ratio,
+                    angle
+                });
 
-                const success = await createImageFrame(
-                    node,
-                    imageData.url,
-                    ratio
-                );
+                if (matchingImages.length === 0) {
+                    figma.notify("No matching images found for the selected criteria");
+                    return;
+                }
 
-                if (success) {
-                    successCount++;
-                } else {
-                    failureCount++;
+                // Update each frame/rectangle with an image
+                for (let i = 0; i < validNodes.length; i++) {
+                    const node = validNodes[i];
+                    const imageData = matchingImages[i % matchingImages.length];
+
+                    const success = await createImageFrame(
+                        node,
+                        imageData.url,
+                        ratio
+                    );
+
+                    if (success) {
+                        successCount++;
+                    } else {
+                        failureCount++;
+                    }
+                }
+            } else {
+                // Use real vehicle data with URLs
+                // Assign vehicles to frames sequentially
+                for (let i = 0; i < validNodes.length; i++) {
+                    const node = validNodes[i];
+                    // Select vehicle using modulo to cycle through the selected vehicles
+                    const vehicle = vehiclesToUse[i % vehiclesToUse.length];
+                    
+                    // Try to get URL from vehicle data
+                    let imageUrl = getAngleUrl(vehicle, angle, processing);
+                    
+                    // If no URL found, find from sample images for that make/model
+                    if (!imageUrl) {
+                        const matchingImages = findMatchingImages({
+                            category,
+                            processing, 
+                            ratio,
+                            angle,
+                            vehicle: {
+                                make: vehicle.make,
+                                model: vehicle.model,
+                                year: vehicle.year
+                            }
+                        });
+                        
+                        if (matchingImages.length > 0) {
+                            imageUrl = matchingImages[0].url;
+                        }
+                    }
+                    
+                    if (imageUrl) {
+                        const success = await createImageFrame(
+                            node,
+                            imageUrl,
+                            ratio
+                        );
+
+                        if (success) {
+                            successCount++;
+                        } else {
+                            failureCount++;
+                        }
+                    } else {
+                        // Create placeholder if no image URL found
+                        await createPlaceholder(
+                            node.type === "RECTANGLE" 
+                                ? figma.createFrame() 
+                                : node as FrameNode,
+                            node.width,
+                            node.height,
+                            `No image found for ${vehicle.year} ${vehicle.make} ${vehicle.model}`
+                        );
+                        failureCount++;
+                    }
                 }
             }
 
             // Create notification message
             let message = "";
             if (successCount > 0 && failureCount === 0) {
-                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""
-                    } with images`;
+                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""} with images`;
             } else if (successCount > 0 && failureCount > 0) {
-                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""
-                    }, ${failureCount} failed`;
+                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""}, ${failureCount} failed`;
             } else {
-                message = "Failed to update any frames";
+                message = "Failed to update any frames with images";
             }
 
             // Show notification
@@ -864,6 +1020,69 @@ figma.ui.onmessage = async (msg: any) => {
             figma.notify(
                 "Error updating frames: " + (error.message || "Unknown error")
             );
+        }
+    } else if (msg.type === "UPDATE_SHEET_CONFIG") {
+        // Update sheet configuration
+        try {
+            const newConfig = msg.payload;
+            if (!newConfig || !newConfig.sheetId) {
+                figma.notify("Invalid sheet configuration", { error: true });
+                return;
+            }
+
+            // Update config
+            sheetConfig = newConfig;
+            
+            // Store in client storage
+            await figma.clientStorage.setAsync(
+                'sheetConfig', 
+                JSON.stringify(sheetConfig)
+            );
+            
+            figma.notify("Sheet configuration updated. Reloading data...");
+            
+            // Try to load data with new config
+            try {
+                const data = await fetchSheetData(sheetConfig);
+                vehicleData = data;
+                isDataLoaded = true;
+                
+                figma.notify(`Loaded ${vehicleData.length} vehicle entries from Google Sheet`);
+            } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                figma.notify(`Error loading sheet data: ${errorMsg}`, { error: true });
+                
+                // Initialize with empty array
+                vehicleData = [];
+                isDataLoaded = false;
+            }
+        } catch (error) {
+            console.error("Error updating sheet config:", error);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            figma.notify(`Error updating sheet config: ${errorMsg}`, { error: true });
+        }
+    } else if (msg.type === "SHEET_DATA_PARSED") {
+        // Receive parsed sheet data from UI
+        try {
+            if (msg.error) {
+                figma.notify(`Error parsing sheet data: ${msg.error}`, { error: true });
+                return;
+            }
+
+            const data = msg.data;
+            if (!data || !Array.isArray(data)) {
+                figma.notify("Invalid sheet data received", { error: true });
+                return;
+            }
+
+            vehicleData = data;
+            isDataLoaded = true;
+            
+            figma.notify(`Loaded ${vehicleData.length} vehicle entries from Google Sheet`);
+        } catch (error) {
+            console.error("Error handling parsed sheet data:", error);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            figma.notify(`Error handling parsed sheet data: ${errorMsg}`, { error: true });
         }
     }
 };
