@@ -33,6 +33,45 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
+    /* Collapsible section styles */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding-bottom: 8px;
+    }
+    
+    .section-header h2 {
+      margin: 0;
+    }
+    
+    .section-content {
+      display: block;
+      transition: height 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .section-content.collapsed {
+      height: 0 !important;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+      overflow: hidden;
+    }
+    
+    .toggle-icon {
+      transition: transform 0.3s ease;
+      font-size: 18px;
+      font-weight: bold;
+      color: #666;
+    }
+    
+    .toggle-icon.collapsed {
+      transform: rotate(-90deg);
+    }
+
     button {
       background-color: #18A0FB;
       color: white;
@@ -76,6 +115,31 @@
       border-color: #18A0FB;
       outline: none;
       box-shadow: 0 0 0 2px rgba(24, 160, 251, 0.2);
+    }
+
+    /* Styles for multi-select dropdown */
+    select[multiple] {
+      height: auto;
+      min-height: 100px;
+      padding: 8px;
+      overflow-y: auto;
+    }
+
+    select[multiple] option {
+      padding: 8px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      background-color: #f5f5f5;
+      cursor: pointer;
+    }
+
+    select[multiple] option:checked {
+      background-color: #18A0FB;
+      color: white;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
     }
 
     label {
@@ -137,11 +201,9 @@
 
     .chip-container {
       display: flex;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       gap: 8px;
       margin-bottom: 12px;
-      overflow-x: auto;
-      padding-bottom: 4px;
     }
 
     .chip {
@@ -211,112 +273,140 @@
 
 <body>
   <div class="section">
-    <h2>Google Sheet Configuration</h2>
-    <div>
-      <label for="sheet-url">Google Sheet URL</label>
-      <input type="text" id="sheet-url" placeholder="Paste your Google Sheet link here">
-      <p class="info-text">
-        Example: docs.google.com/spreadsheets/d/1A2B3...
-      </p>
-
-      <label for="sheet-name">Sheet Name</label>
-      <input type="text" id="sheet-name" placeholder="Sheet1" value="Sheet1">
-
-      <button id="save-sheet-config">Save & Load Data</button>
-      <div>
-        <a href="#" id="download-template" class="download-link">Download Sample Template</a>
-      </div>
+    <div class="section-header">
+      <h2>Google Sheet Configuration</h2>
+      <div class="toggle-icon">▼</div>
     </div>
+    <div class="section-content">
+      <div>
+        <label for="sheet-url">Google Sheet URL</label>
+        <input type="text" id="sheet-url" placeholder="Paste your Google Sheet link here">
+        <p class="info-text">
+          Example: docs.google.com/spreadsheets/d/1A2B3...
+        </p>
 
-    <div id="data-status-container" class="data-status data-waiting">
-      No vehicle data loaded. Please configure Google Sheet.
+        <label for="sheet-name">Sheet Name</label>
+        <input type="text" id="sheet-name" placeholder="Sheet1" value="Sheet1">
+
+        <button id="save-sheet-config">Save & Load Data</button>
+        <div>
+          <a href="#" id="download-template" class="download-link">Download Sample Template</a>
+        </div>
+      </div>
+
+      <div id="data-status-container" class="data-status data-waiting">
+        No vehicle data loaded. Please configure Google Sheet.
+      </div>
     </div>
   </div>
 
   <div class="section">
-    <h2>Insert Vehicle Data</h2>
-    <div class="grid">
-      <button id="insert-vin">VIN</button>
-      <button id="insert-year">Year</button>
-      <button id="insert-make">Make</button>
-      <button id="insert-model">Model</button>
-      <button id="insert-trim">Trim</button>
-      <button id="insert-price">Price</button>
-      <button id="insert-body-type">Body Type</button>
-      <button id="insert-engine">Engine</button>
-      <button id="insert-transmission">Transmission</button>
-      <button id="insert-fuel-type">Fuel Type</button>
-      <button id="insert-mileage">Mileage</button>
-      <button id="insert-exterior-color">Exterior Color</button>
-      <button id="insert-interior-color">Interior Color</button>
-      <button id="insert-drivetrain">Drivetrain</button>
-      <button id="insert-features">Features</button>
-      <button id="insert-fullname">Full Name</button>
-      <button id="insert-full-specs">Full Specs</button>
+    <div class="section-header">
+      <h2>Insert Vehicle Data</h2>
+      <div class="toggle-icon">▼</div>
+    </div>
+    <div class="section-content">
+      <div class="grid">
+        <button id="insert-vin">VIN</button>
+        <button id="insert-year">Year</button>
+        <button id="insert-make">Make</button>
+        <button id="insert-model">Model</button>
+        <button id="insert-trim">Trim</button>
+        <button id="insert-price">Price</button>
+        <button id="insert-body-type">Body Type</button>
+        <button id="insert-engine">Engine</button>
+        <button id="insert-transmission">Transmission</button>
+        <button id="insert-fuel-type">Fuel Type</button>
+        <button id="insert-mileage">Mileage</button>
+        <button id="insert-exterior-color">Exterior Color</button>
+        <button id="insert-interior-color">Interior Color</button>
+        <button id="insert-drivetrain">Drivetrain</button>
+        <button id="insert-features">Features</button>
+        <button id="insert-fullname">Full Name</button>
+        <button id="insert-full-specs">Full Specs</button>
+      </div>
     </div>
   </div>
 
   <div class="section image-section">
-    <h2>Insert Vehicle Images</h2>
-
-    <div>
-      <!-- Category Chips -->
-      <div class="chip-group">
-        <label>Image Category</label>
-        <div class="chip-container" id="category-chips">
-          <div class="chip selected" data-value="exterior">Exterior</div>
-          <div class="chip" data-value="interior">Interior</div>
-        </div>
-      </div>
-
-      <!-- Processing Type Chips -->
-      <div class="chip-group">
-        <label>Processing Type</label>
-        <div class="chip-container" id="processing-chips">
-          <div class="chip selected" data-value="processed">Processed</div>
-          <div class="chip" data-value="raw">Raw</div>
-        </div>
-      </div>
-
-      <!-- Aspect Ratio Chips -->
-      <div class="chip-group">
-        <label>Aspect Ratio</label>
-        <div class="chip-container" id="ratio-chips">
-          <div class="chip selected" data-value="16:9">16:9</div>
-          <div class="chip" data-value="4:3">4:3</div>
-          <div class="chip" data-value="1:1">1:1</div>
-        </div>
-      </div>
-
-      <!-- Angle Chips -->
-      <div class="chip-group">
-        <label>Angle</label>
-        <div class="chip-container" id="angle-chips">
-          <div class="chip selected" data-value="front">Front</div>
-          <div class="chip" data-value="side">Side</div>
-          <div class="chip" data-value="rear">Rear</div>
-          <div class="chip" data-value="interior">Interior</div>
-        </div>
-      </div>
-
-      <button id="insert-image">Insert Vehicle Image</button>
+    <div class="section-header">
+      <h2>Insert Vehicle Images</h2>
+      <div class="toggle-icon">▼</div>
     </div>
+    <div class="section-content">
+      <div>
+        <!-- VIN Dropdown -->
+        <div class="form-group">
+          <label for="vin-select">Select VIN</label>
+          <select id="vin-select" multiple>
+            <option value="">Loading VINs...</option>
+          </select>
+        </div>
 
-    <div id="status-container"></div>
+        <!-- Category Chips -->
+        <div class="chip-group">
+          <label>Image Category</label>
+          <div class="chip-container" id="category-chips">
+            <div class="chip selected" data-value="exterior">Exterior</div>
+            <div class="chip" data-value="interior">Interior</div>
+          </div>
+        </div>
+
+        <!-- Processing Type Chips -->
+        <div class="chip-group">
+          <label>Processing Type</label>
+          <div class="chip-container" id="processing-chips">
+            <div class="chip selected" data-value="processed">Processed</div>
+            <div class="chip" data-value="raw">Raw</div>
+          </div>
+        </div>
+
+        <!-- Aspect Ratio Chips -->
+        <div class="chip-group">
+          <label>Aspect Ratio</label>
+          <div class="chip-container" id="ratio-chips">
+            <div class="chip selected" data-value="16:9">16:9</div>
+            <div class="chip" data-value="4:3">4:3</div>
+            <div class="chip" data-value="1:1">1:1</div>
+          </div>
+        </div>
+
+        <!-- Angle Chips -->
+        <div class="chip-group">
+          <label>Angle</label>
+          <div class="chip-container" id="angle-chips">
+            <div class="chip selected" data-value="front">Front (0°)</div>
+            <div class="chip" data-value="front_left">Front Left (45°)</div>
+            <div class="chip" data-value="left">Left (90°)</div>
+            <div class="chip" data-value="rear_left">Rear Left (135°)</div>
+            <div class="chip" data-value="rear">Rear (180°)</div>
+            <div class="chip" data-value="rear_right">Rear Right (225°)</div>
+            <div class="chip" data-value="right">Right (270°)</div>
+            <div class="chip" data-value="front_right">Front Right (315°)</div>
+            <div class="chip" data-value="interior">Interior</div>
+          </div>
+        </div>
+
+        <button id="insert-image">Insert Vehicle Image</button>
+      </div>
+
+      <div id="status-container"></div>
+    </div>
   </div>
 
   <script>
     // Sample CSV template for download
-    const sampleCSV = `vin,make,model,year,price,body_type,trim,engine,transmission,fuel_type,mileage,exterior_color,interior_color,drivetrain,features
-1HGCM82633A123456,Honda,Accord,2023,$32000,Sedan,Sport,1.5L Turbo 4-Cylinder,CVT,Gasoline,32 City / 38 Hwy,Sonic Gray Pearl,Black Leather,FWD,"Apple CarPlay, Android Auto, Lane Departure Warning"
-5TDZA23C13S012345,Toyota,Camry,2023,$30000,Sedan,XSE,2.5L 4-Cylinder,8-Speed Automatic,Gasoline,28 City / 39 Hwy,Wind Chill Pearl,Red Leather,FWD,"Panoramic Roof, JBL Audio, Wireless Charging"
-1FTEW1E53JFB12345,Ford,F-150,2023,$45000,Truck,Lariat,3.5L EcoBoost V6,10-Speed Automatic,Gasoline,20 City / 26 Hwy,Rapid Red,Black/Brown Leather,4WD,"Pro Trailer Backup Assist, 360-Degree Camera, Power Tailgate"`;
+    const sampleCSV = `vin,make,model,year,price,body_type,trim,engine,transmission,fuel_type,mileage,exterior_color,interior_color,drivetrain,features,front_0_url,front_left_45_url,left_90_url,rear_left_135_url,rear_180_url,rear_right_225_url,right_270_url,front_right_315_url
+1HGCM82633A123456,Honda,Accord,2023,$32000,Sedan,Sport,1.5L Turbo 4-Cylinder,CVT,Gasoline,32 City / 38 Hwy,Sonic Gray Pearl,Black Leather,FWD,"Apple CarPlay, Android Auto, Lane Departure Warning",https://example.com/honda/front.jpg,https://example.com/honda/front-left.jpg,https://example.com/honda/left.jpg,https://example.com/honda/rear-left.jpg,https://example.com/honda/rear.jpg,https://example.com/honda/rear-right.jpg,https://example.com/honda/right.jpg,https://example.com/honda/front-right.jpg
+5TDZA23C13S012345,Toyota,Camry,2023,$30000,Sedan,XSE,2.5L 4-Cylinder,8-Speed Automatic,Gasoline,28 City / 39 Hwy,Wind Chill Pearl,Red Leather,FWD,"Panoramic Roof, JBL Audio, Wireless Charging",https://example.com/toyota/front.jpg,,,,,,,
+1FTEW1E53JFB12345,Ford,F-150,2023,$45000,Truck,Lariat,3.5L EcoBoost V6,10-Speed Automatic,Gasoline,20 City / 26 Hwy,Rapid Red,Black/Brown Leather,4WD,"Pro Trailer Backup Assist, 360-Degree Camera, Power Tailgate",https://example.com/ford/front.jpg,,,,,,,`;
 
     // Initialize chip selection variables
     let selectedCategory = 'exterior';
     let selectedProcessing = 'processed';
     let selectedRatio = '16:9';
     let selectedAngle = 'front';
+    let selectedVINs = []; // Array to store selected VINs
 
     // Initialize message passing with Figma
     onmessage = (event) => {
@@ -335,6 +425,62 @@
     let sheetName = 'Sheet1';
     let vehicleData = [];
     let isDataLoaded = false;
+    
+    // Set up collapsible sections
+    document.querySelectorAll('.section-header').forEach(header => {
+      const content = header.nextElementSibling;
+      const icon = header.querySelector('.toggle-icon');
+      
+      // Store initial height for animation
+      content.style.height = content.scrollHeight + 'px';
+      
+      header.addEventListener('click', () => {
+        if (content.classList.contains('collapsed')) {
+          // Expand
+          content.classList.remove('collapsed');
+          icon.classList.remove('collapsed');
+          content.style.height = content.scrollHeight + 'px';
+        } else {
+          // Collapse
+          content.style.height = content.scrollHeight + 'px';
+          icon.classList.add('collapsed');
+          
+          // Trigger reflow to make sure the height is set
+          content.getBoundingClientRect();
+          content.classList.add('collapsed');
+        }
+      });
+    });
+
+    // Run handleCategoryChange once on load to correctly set initial state
+    handleCategoryChange(selectedCategory);
+
+    // Function to populate VIN dropdown
+    function populateVINDropdown() {
+      const vinSelect = document.getElementById('vin-select');
+      vinSelect.innerHTML = ''; // Clear existing options
+      
+      if (!isDataLoaded || vehicleData.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No VINs available';
+        vinSelect.appendChild(option);
+        return;
+      }
+      
+      // Add options for each VIN in the data
+      vehicleData.forEach((vehicle, index) => {
+        const option = document.createElement('option');
+        option.value = index.toString(); // Use index as value for easy retrieval
+        option.textContent = `${vehicle.vin} - ${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+        vinSelect.appendChild(option);
+      });
+      
+      // Set up change event
+      vinSelect.addEventListener('change', () => {
+        selectedVINs = Array.from(vinSelect.selectedOptions).map(option => parseInt(option.value));
+      });
+    }
 
     // Function to extract sheet ID from URL
     function extractSheetId(url) {
@@ -367,10 +513,83 @@
           // Add selected class to clicked chip
           chip.classList.add('selected');
           
+          // Get selected value
+          const value = chip.getAttribute('data-value');
+          
           // Call the callback with the selected value
-          callback(chip.getAttribute('data-value'));
+          callback(value);
+          
+          // Handle special case for category chip selection
+          if (containerId === 'category-chips') {
+            handleCategoryChange(value);
+          }
         });
       });
+    }
+    
+    // Handle special logic when category changes
+    function handleCategoryChange(category) {
+      const processingChips = document.querySelectorAll('#processing-chips .chip');
+      const angleChips = document.querySelectorAll('#angle-chips .chip');
+      const interiorAngleChip = document.querySelector('#angle-chips .chip[data-value="interior"]');
+      
+      if (category === 'interior') {
+        // Disable angle and processing chips for interior
+        processingChips.forEach(chip => {
+          chip.style.opacity = '0.5';
+          chip.style.pointerEvents = 'none';
+        });
+        
+        // Hide the interior angle chip since it's redundant
+        if (interiorAngleChip) {
+          interiorAngleChip.style.display = 'none';
+        }
+        
+        // Select first available angle by default (usually "Front")
+        const firstAngleChip = document.querySelector('#angle-chips .chip[data-value="front"]');
+        if (firstAngleChip) {
+          angleChips.forEach(c => c.classList.remove('selected'));
+          firstAngleChip.classList.add('selected');
+          selectedAngle = 'front'; // This gets ignored anyway for interior
+        }
+        
+        // Disable all exterior angles since they don't apply to interior
+        angleChips.forEach(chip => {
+          if (chip.getAttribute('data-value') !== 'interior') {
+            chip.style.opacity = '0.5';
+            chip.style.pointerEvents = 'none';
+          }
+        });
+      } else {
+        // Enable all chips for exterior
+        processingChips.forEach(chip => {
+          chip.style.opacity = '1';
+          chip.style.pointerEvents = 'auto';
+        });
+        
+        // Hide interior angle and enable all other angle chips
+        angleChips.forEach(chip => {
+          if (chip.getAttribute('data-value') === 'interior') {
+            // Hide the interior angle chip for exterior category
+            chip.style.display = 'none';
+          } else {
+            // Enable all exterior angles
+            chip.style.opacity = '1';
+            chip.style.pointerEvents = 'auto';
+            chip.style.display = 'inline-block';
+          }
+        });
+        
+        // If interior angle was selected, switch to the first angle
+        if (selectedAngle === 'interior') {
+          const firstAngleChip = document.querySelector('#angle-chips .chip[data-value="front"]');
+          if (firstAngleChip) {
+            angleChips.forEach(c => c.classList.remove('selected'));
+            firstAngleChip.classList.add('selected');
+            selectedAngle = 'front';
+          }
+        }
+      }
     }
 
     // Set up download template link
@@ -447,7 +666,8 @@
             category: selectedCategory,
             processing: selectedProcessing,
             ratio: selectedRatio,
-            angle: selectedAngle
+            angle: selectedAngle,
+            vinIndices: selectedVINs.length > 0 ? selectedVINs : null
           }
         }
       }, '*');
@@ -537,6 +757,8 @@
         vehicleData = parsedData;
         isDataLoaded = true;
         showDataStatus(`Loaded ${parsedData.length} vehicle entries from Google Sheet`, 'loaded');
+
+        populateVINDropdown();
 
       } catch (error) {
         console.error('Error fetching sheet data:', error);

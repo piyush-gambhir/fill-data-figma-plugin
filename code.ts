@@ -16,6 +16,14 @@ interface VehicleEntry {
     interior_color: string;
     drivetrain: string;
     features: string[];
+    front_0_url?: string;
+    front_left_45_url?: string;
+    left_90_url?: string;
+    rear_left_135_url?: string;
+    rear_180_url?: string;
+    rear_right_225_url?: string;
+    right_270_url?: string;
+    front_right_315_url?: string;
 }
 
 // Configuration for Google Sheet
@@ -66,14 +74,14 @@ async function fetchSheetData(config: SheetConfig): Promise<VehicleEntry[]> {
             });
 
             // Handler for sheet data response
-            const messageHandler = (msg: any) => {
+            const messageHandler = (msg: {type: string; error?: string; data?: VehicleEntry[]}) => {
                 if (msg.type === "SHEET_DATA_RESULT") {
                     figma.ui.off("message", messageHandler);
                     
                     if (msg.error) {
                         reject(new Error(msg.error));
                     } else {
-                        resolve(msg.data);
+                        resolve(msg.data || []);
                     }
                 }
             };
@@ -333,7 +341,7 @@ function findMatchingImages(settings: {
 }
 
 // Helper function to get error message
-function getErrorMessage(error: unknown): string {
+function _getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
     return String(error);
 }
@@ -724,6 +732,29 @@ async function createPlaceholder(
     }
 }
 
+// Function to get the appropriate URL based on angle and processing type
+function getAngleUrl(vehicle: VehicleEntry, angle: string, _processing: string): string | null {
+    // Map angle to the corresponding URL property
+    const angleToPropertyMap: Record<string, keyof VehicleEntry> = {
+        "front": "front_0_url",
+        "front_left": "front_left_45_url",
+        "left": "left_90_url",
+        "rear_left": "rear_left_135_url",
+        "rear": "rear_180_url",
+        "rear_right": "rear_right_225_url",
+        "right": "right_270_url",
+        "front_right": "front_right_315_url"
+    };
+    
+    const urlProperty = angleToPropertyMap[angle];
+    if (urlProperty && vehicle[urlProperty]) {
+        // If we have explicit URLs in the CSV, we'll use them
+        // We can extend the data model in the future to support both raw and processed URLs
+        return vehicle[urlProperty] as string;
+    }
+    return null;
+}
+
 // Initialize by loading data from Google Sheet if available
 async function initializePlugin() {
     try {
@@ -845,7 +876,7 @@ figma.ui.onmessage = async (msg: any) => {
             );
         }
     } else if (msg.type === "INSERT_IMAGE") {
-        const { category, processing, ratio, angle } = msg.payload;
+        const { category, processing, ratio, angle, vinIndices } = msg.payload;
         const selectedNodes = figma.currentPage.selection;
 
         // Check for selection
@@ -870,62 +901,116 @@ figma.ui.onmessage = async (msg: any) => {
                 figma.notify("Warning: Using sample images as no vehicle data is loaded.");
             }
 
-            // Find matching images
-            const vehicle = vehicleData.length > 0 
-                ? vehicleData[currentIndex % vehicleData.length]
-                : undefined;
-
-            const matchingImages = findMatchingImages({
-                category,
-                processing,
-                ratio,
-                angle,
-                vehicle: vehicle ? {
-                    make: vehicle.make,
-                    model: vehicle.model,
-                    year: vehicle.year
-                } : undefined
-            });
-
-            if (matchingImages.length === 0) {
-                figma.notify(
-                    "No matching images found for the selected criteria"
-                );
-                return;
-            }
-
             // Track success and failures
             let successCount = 0;
             let failureCount = 0;
+            
+            // If vinIndices is provided, use those specific vehicles
+            let vehiclesToUse: VehicleEntry[] = [];
+            if (vinIndices && vinIndices.length > 0) {
+                vehiclesToUse = vinIndices.map((index: number) => vehicleData[index]);
+            } else if (vehicleData.length > 0) {
+                // Otherwise use the current index vehicle
+                vehiclesToUse = [vehicleData[currentIndex % vehicleData.length]];
+            }
 
-            // Update each frame/rectangle with an image
-            for (let i = 0; i < validNodes.length; i++) {
-                const node = validNodes[i];
-                const imageData = matchingImages[i % matchingImages.length];
+            // If no specific vehicles or no data, use sample images
+            if (vehiclesToUse.length === 0) {
+                // Find matching sample images
+                const matchingImages = findMatchingImages({
+                    category,
+                    processing,
+                    ratio,
+                    angle
+                });
 
-                const success = await createImageFrame(
-                    node,
-                    imageData.url,
-                    ratio
-                );
+                if (matchingImages.length === 0) {
+                    figma.notify("No matching images found for the selected criteria");
+                    return;
+                }
 
-                if (success) {
-                    successCount++;
-                } else {
-                    failureCount++;
+                // Update each frame/rectangle with an image
+                for (let i = 0; i < validNodes.length; i++) {
+                    const node = validNodes[i];
+                    const imageData = matchingImages[i % matchingImages.length];
+
+                    const success = await createImageFrame(
+                        node,
+                        imageData.url,
+                        ratio
+                    );
+
+                    if (success) {
+                        successCount++;
+                    } else {
+                        failureCount++;
+                    }
+                }
+            } else {
+                // Use real vehicle data with URLs
+                // Assign vehicles to frames sequentially
+                for (let i = 0; i < validNodes.length; i++) {
+                    const node = validNodes[i];
+                    // Select vehicle using modulo to cycle through the selected vehicles
+                    const vehicle = vehiclesToUse[i % vehiclesToUse.length];
+                    
+                    // Try to get URL from vehicle data
+                    let imageUrl = getAngleUrl(vehicle, angle, processing);
+                    
+                    // If no URL found, find from sample images for that make/model
+                    if (!imageUrl) {
+                        const matchingImages = findMatchingImages({
+                            category,
+                            processing, 
+                            ratio,
+                            angle,
+                            vehicle: {
+                                make: vehicle.make,
+                                model: vehicle.model,
+                                year: vehicle.year
+                            }
+                        });
+                        
+                        if (matchingImages.length > 0) {
+                            imageUrl = matchingImages[0].url;
+                        }
+                    }
+                    
+                    if (imageUrl) {
+                        const success = await createImageFrame(
+                            node,
+                            imageUrl,
+                            ratio
+                        );
+
+                        if (success) {
+                            successCount++;
+                        } else {
+                            failureCount++;
+                        }
+                    } else {
+                        // Create placeholder if no image URL found
+                        await createPlaceholder(
+                            node.type === "RECTANGLE" 
+                                ? figma.createFrame() 
+                                : node as FrameNode,
+                            node.width,
+                            node.height,
+                            `No image found for ${vehicle.year} ${vehicle.make} ${vehicle.model}`
+                        );
+                        failureCount++;
+                    }
                 }
             }
 
             // Create notification message
             let message = "";
             if (successCount > 0 && failureCount === 0) {
-                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""
-                    } with images`;
+                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""} with images`;
             } else if (successCount > 0 && failureCount > 0) {
-                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""
-                    }, ${failureCount} failed`;
+                message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""}, ${failureCount} failed`;
             } else {
-                message = "Failed to update any frames";
+                message = "Failed to update any frames with images";
             }
 
             // Show notification
