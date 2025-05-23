@@ -17,13 +17,21 @@ interface VehicleEntry {
     drivetrain: string;
     features: string[];
     front_0_url?: string;
+    front_0_url_input?: string;
     front_left_45_url?: string;
+    front_left_45_url_input?: string;
     left_90_url?: string;
+    left_90_url_input?: string;
     rear_left_135_url?: string;
+    rear_left_135_url_input?: string;
     rear_180_url?: string;
+    rear_180_url_input?: string;
     rear_right_225_url?: string;
+    rear_right_225_url_input?: string;
     right_270_url?: string;
+    right_270_url_input?: string;
     front_right_315_url?: string;
+    front_right_315_url_input?: string;
 }
 
 // Configuration for Google Sheet
@@ -754,20 +762,27 @@ function getAngleUrl(vehicle: VehicleEntry | undefined, angle: string, _processi
 
     // Map angle to the corresponding URL property
     const angleToPropertyMap: Record<string, keyof VehicleEntry> = {
-        "front": "front_0_url",
-        "front_left": "front_left_45_url",
-        "left": "left_90_url",
-        "rear_left": "rear_left_135_url",
-        "rear": "rear_180_url",
-        "rear_right": "rear_right_225_url",
-        "right": "right_270_url",
-        "front_right": "front_right_315_url"
+        "front": "front_0_url_input",
+        "front_left": "front_left_45_url_input",
+        "left": "left_90_url_input",
+        "rear_left": "rear_left_135_url_input",
+        "rear": "rear_180_url_input",
+        "rear_right": "rear_right_225_url_input",
+        "right": "right_270_url_input",
+        "front_right": "front_right_315_url_input"
     };
     
     const urlProperty = angleToPropertyMap[angle];
     if (urlProperty && vehicle[urlProperty]) {
         return vehicle[urlProperty] as string;
     }
+    
+    // If input URL is not available, fall back to processed URL
+    const processedUrlProperty = urlProperty?.replace('_input', '') as keyof VehicleEntry;
+    if (processedUrlProperty && vehicle[processedUrlProperty]) {
+        return vehicle[processedUrlProperty] as string;
+    }
+    
     return null;
 }
 
