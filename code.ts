@@ -485,13 +485,19 @@ async function createImageFrame(
                                 throw new Error("No valid image data received");
                             }
 
-                            // Convert array back to Uint8Array
+                            // Convert array back to Uint8Array with better memory handling
                             const imageData = new Uint8Array(msg.data);
                             console.log(`Received image data of length: ${imageData.length}`);
 
                             try {
-                                // Create and apply image
-                                const image = await figma.createImage(imageData);
+                                // Create and apply image with error handling
+                                let image;
+                                try {
+                                    image = await figma.createImage(imageData);
+                                } catch (error: unknown) {
+                                    console.error("Error in createImage:", error);
+                                    throw new Error(`Failed to create image: ${error instanceof Error ? error.message : String(error)}`);
+                                }
 
                                 // Check if frame still exists before setting fills
                                 const frameStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
@@ -502,14 +508,20 @@ async function createImageFrame(
                                     return;
                                 }
 
-                                frameStillExists.fills = [
-                                    {
-                                        type: "IMAGE",
-                                        imageHash: image.hash,
-                                        scaleMode: "FILL",
-                                        scalingFactor: 1,
-                                    },
-                                ];
+                                // Set image fill with error handling
+                                try {
+                                    frameStillExists.fills = [
+                                        {
+                                            type: "IMAGE",
+                                            imageHash: image.hash,
+                                            scaleMode: "FILL",
+                                            scalingFactor: 1,
+                                        },
+                                    ];
+                                } catch (error: unknown) {
+                                    console.error("Error setting image fill:", error);
+                                    throw new Error(`Failed to set image fill: ${error instanceof Error ? error.message : String(error)}`);
+                                }
 
                                 figma.notify("Image inserted successfully!", {
                                     timeout: 2000,
@@ -733,7 +745,13 @@ async function createPlaceholder(
 }
 
 // Function to get the appropriate URL based on angle and processing type
-function getAngleUrl(vehicle: VehicleEntry, angle: string, _processing: string): string | null {
+function getAngleUrl(vehicle: VehicleEntry | undefined, angle: string, _processing: string): string | null {
+    // If no vehicle data, return null
+    if (!vehicle) {
+        console.warn('No vehicle data available');
+        return null;
+    }
+
     // Map angle to the corresponding URL property
     const angleToPropertyMap: Record<string, keyof VehicleEntry> = {
         "front": "front_0_url",
@@ -748,8 +766,6 @@ function getAngleUrl(vehicle: VehicleEntry, angle: string, _processing: string):
     
     const urlProperty = angleToPropertyMap[angle];
     if (urlProperty && vehicle[urlProperty]) {
-        // If we have explicit URLs in the CSV, we'll use them
-        // We can extend the data model in the future to support both raw and processed URLs
         return vehicle[urlProperty] as string;
     }
     return null;
@@ -908,10 +924,15 @@ figma.ui.onmessage = async (msg: any) => {
             // If vinIndices is provided, use those specific vehicles
             let vehiclesToUse: VehicleEntry[] = [];
             if (vinIndices && vinIndices.length > 0) {
-                vehiclesToUse = vinIndices.map((index: number) => vehicleData[index]);
+                vehiclesToUse = vinIndices
+                    .map((index: number) => vehicleData[index])
+                    .filter((vehicle): vehicle is VehicleEntry => vehicle !== undefined);
             } else if (vehicleData.length > 0) {
                 // Otherwise use the current index vehicle
-                vehiclesToUse = [vehicleData[currentIndex % vehicleData.length]];
+                const currentVehicle = vehicleData[currentIndex % vehicleData.length];
+                if (currentVehicle) {
+                    vehiclesToUse = [currentVehicle];
+                }
             }
 
             // If no specific vehicles or no data, use sample images
@@ -952,7 +973,13 @@ figma.ui.onmessage = async (msg: any) => {
                 for (let i = 0; i < validNodes.length; i++) {
                     const node = validNodes[i];
                     // Select vehicle using modulo to cycle through the selected vehicles
-                    const vehicle = vehiclesToUse[i % vehiclesToUse.length];
+                    const vehicle: VehicleEntry | undefined = vehiclesToUse[i % vehiclesToUse.length];
+                    
+                    if (!vehicle) {
+                        console.warn('No vehicle data available for index:', i);
+                        failureCount++;
+                        continue;
+                    }
                     
                     // Try to get URL from vehicle data
                     let imageUrl = getAngleUrl(vehicle, angle, processing);

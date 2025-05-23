@@ -12,7 +12,8 @@
     "allowedDomains": [
       "https://media.spyneai.com",
       "https://docs.google.com",
-      "https://api.allorigins.win"
+      "https://api.allorigins.win",
+      "https://corsproxy.io"
     ]
   }
 }

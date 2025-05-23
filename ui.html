@@ -306,24 +306,27 @@
       <div class="toggle-icon">▼</div>
     </div>
     <div class="section-content">
-      <div class="grid">
-        <button id="insert-vin">VIN</button>
-        <button id="insert-year">Year</button>
-        <button id="insert-make">Make</button>
-        <button id="insert-model">Model</button>
-        <button id="insert-trim">Trim</button>
-        <button id="insert-price">Price</button>
-        <button id="insert-body-type">Body Type</button>
-        <button id="insert-engine">Engine</button>
-        <button id="insert-transmission">Transmission</button>
-        <button id="insert-fuel-type">Fuel Type</button>
-        <button id="insert-mileage">Mileage</button>
-        <button id="insert-exterior-color">Exterior Color</button>
-        <button id="insert-interior-color">Interior Color</button>
-        <button id="insert-drivetrain">Drivetrain</button>
-        <button id="insert-features">Features</button>
-        <button id="insert-fullname">Full Name</button>
-        <button id="insert-full-specs">Full Specs</button>
+      <div class="chip-group">
+        <label>Vehicle Data Fields</label>
+        <div class="chip-container" id="vehicle-data-chips">
+          <div class="chip" data-value="vin">VIN</div>
+          <div class="chip" data-value="year">Year</div>
+          <div class="chip" data-value="make">Make</div>
+          <div class="chip" data-value="model">Model</div>
+          <div class="chip" data-value="trim">Trim</div>
+          <div class="chip" data-value="price">Price</div>
+          <div class="chip" data-value="body-type">Body Type</div>
+          <div class="chip" data-value="engine">Engine</div>
+          <div class="chip" data-value="transmission">Transmission</div>
+          <div class="chip" data-value="fuel-type">Fuel Type</div>
+          <div class="chip" data-value="mileage">Mileage</div>
+          <div class="chip" data-value="exterior-color">Exterior Color</div>
+          <div class="chip" data-value="interior-color">Interior Color</div>
+          <div class="chip" data-value="drivetrain">Drivetrain</div>
+          <div class="chip" data-value="features">Features</div>
+          <div class="chip" data-value="fullname">Full Name</div>
+          <div class="chip" data-value="full-specs">Full Specs</div>
+        </div>
       </div>
     </div>
   </div>
@@ -499,29 +502,37 @@
     setupChips('processing-chips', (value) => { selectedProcessing = value; });
     setupChips('ratio-chips', (value) => { selectedRatio = value; });
     setupChips('angle-chips', (value) => { selectedAngle = value; });
+    setupChips('vehicle-data-chips', (value) => {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'INSERT_FIELD',
+          payload: { field: value }
+        }
+      }, '*');
+    });
 
-    // Function to handle chip selection
-    function setupChips(containerId, callback) {
+    // Function to set up chip selection
+    function setupChips(containerId, onChange) {
       const container = document.getElementById(containerId);
-      const chips = container.querySelectorAll('.chip');
-      
-      chips.forEach(chip => {
+      if (!container) return;
+
+      container.querySelectorAll('.chip').forEach(chip => {
         chip.addEventListener('click', () => {
-          // Remove selected class from all chips in this container
-          chips.forEach(c => c.classList.remove('selected'));
+          // For vehicle data chips, don't toggle selection
+          if (containerId === 'vehicle-data-chips') {
+            onChange(chip.getAttribute('data-value'));
+            return;
+          }
+
+          // For other chips, handle selection
+          const wasSelected = chip.classList.contains('selected');
+          container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
           
-          // Add selected class to clicked chip
-          chip.classList.add('selected');
-          
-          // Get selected value
-          const value = chip.getAttribute('data-value');
-          
-          // Call the callback with the selected value
-          callback(value);
-          
-          // Handle special case for category chip selection
-          if (containerId === 'category-chips') {
-            handleCategoryChange(value);
+          if (!wasSelected) {
+            chip.classList.add('selected');
+            onChange(chip.getAttribute('data-value'));
+          } else {
+            onChange(null);
           }
         });
       });
@@ -643,17 +654,17 @@
     });
 
     // Add event listeners to data buttons
-    document.querySelectorAll('.grid button').forEach(button => {
-      button.addEventListener('click', () => {
-        const fieldId = button.id.replace('insert-', '');
-        const field = fieldId.replace(/-/g, '_');
-
-        parent.postMessage({
-          pluginMessage: {
-            type: 'INSERT_FIELD',
-            payload: { field }
-          }
-        }, '*');
+    document.querySelectorAll('.chip-container').forEach(container => {
+      container.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const field = chip.getAttribute('data-value');
+          parent.postMessage({
+            pluginMessage: {
+              type: 'INSERT_FIELD',
+              payload: { field }
+            }
+          }, '*');
+        });
       });
     });
 
@@ -852,24 +863,51 @@
           try {
             console.log('Image loaded successfully', `Size: ${img.width}x${img.height}`);
 
-            // Draw the image to a canvas to convert format
+            // Check if image dimensions are too large
+            const MAX_DIMENSION = 2048; // Maximum dimension for either width or height
+            let targetWidth = img.width;
+            let targetHeight = img.height;
+
+            // Calculate new dimensions while maintaining aspect ratio
+            if (img.width > MAX_DIMENSION || img.height > MAX_DIMENSION) {
+              if (img.width > img.height) {
+                targetWidth = MAX_DIMENSION;
+                targetHeight = Math.round((img.height * MAX_DIMENSION) / img.width);
+              } else {
+                targetHeight = MAX_DIMENSION;
+                targetWidth = Math.round((img.width * MAX_DIMENSION) / img.height);
+              }
+            }
+
+            // Create canvas with target dimensions
             const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
 
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-            // Export as PNG (supported by Figma)
-            const dataUrl = canvas.toDataURL('image/png');
-            console.log('Converted image to PNG format');
+            // Export as PNG with quality settings
+            const dataUrl = canvas.toDataURL('image/png', 0.8);
+            console.log('Converted image to PNG format', `New size: ${targetWidth}x${targetHeight}`);
 
-            // Convert data URL to binary
-            const binaryString = atob(dataUrl.split(',')[1]);
-            const uint8Array = new Uint8Array(binaryString.length);
+            // Convert data URL to binary in chunks to avoid memory issues
+            const base64Data = dataUrl.split(',')[1];
+            const chunkSize = 1024 * 1024; // 1MB chunks
+            const totalChunks = Math.ceil(base64Data.length / chunkSize);
+            let processedChunks = 0;
+            let uint8Array = new Uint8Array(base64Data.length);
 
-            for (let i = 0; i < binaryString.length; i++) {
-              uint8Array[i] = binaryString.charCodeAt(i);
+            for (let i = 0; i < base64Data.length; i += chunkSize) {
+              const chunk = base64Data.slice(i, i + chunkSize);
+              const chunkBinary = atob(chunk);
+              
+              for (let j = 0; j < chunkBinary.length; j++) {
+                uint8Array[i + j] = chunkBinary.charCodeAt(j);
+              }
+              
+              processedChunks++;
+              console.log(`Processed chunk ${processedChunks}/${totalChunks}`);
             }
 
             console.log('Sending PNG image data to plugin', `Size: ${uint8Array.length} bytes`);
@@ -899,15 +937,52 @@
           parent.postMessage({
             pluginMessage: {
               type: 'IMAGE_ERROR',
-              error: 'Failed to load image'
+              error: 'Failed to load image. Please check the image URL and try again.'
             }
           }, '*');
-          showStatus('Error: Failed to load image', 'error');
+          showStatus('Error: Failed to load image. Please check the image URL and try again.', 'error');
         };
 
-        // Add cache busting to avoid CORS issues
-        const cacheBustUrl = `${url}?cb=${Date.now()}`;
-        img.src = cacheBustUrl;
+        // Add cache busting and error handling for the URL
+        if (!url) {
+          throw new Error('No image URL provided');
+        }
+
+        // Validate URL format
+        try {
+          new URL(url);
+        } catch (e) {
+          throw new Error('Invalid image URL format');
+        }
+
+        // Try multiple CORS proxies in sequence
+        const corsProxies = [
+          'https://corsproxy.io/?',
+          'https://api.allorigins.win/raw?url=',
+          'https://cors-anywhere.herokuapp.com/'
+        ];
+
+        let proxyIndex = 0;
+        function tryNextProxy() {
+          if (proxyIndex >= corsProxies.length) {
+            throw new Error('All CORS proxies failed');
+          }
+
+          const proxyUrl = corsProxies[proxyIndex] + encodeURIComponent(url);
+          const cacheBustUrl = `${proxyUrl}${proxyUrl.includes('?') ? '&' : '?'}cb=${Date.now()}`;
+          
+          console.log(`Trying CORS proxy ${proxyIndex + 1}:`, proxyUrl);
+          
+          img.onerror = function(err) {
+            console.error(`Proxy ${proxyIndex + 1} failed:`, err);
+            proxyIndex++;
+            tryNextProxy();
+          };
+          
+          img.src = cacheBustUrl;
+        }
+
+        tryNextProxy();
 
       } catch (error) {
         console.error('Error setting up image load:', error);
