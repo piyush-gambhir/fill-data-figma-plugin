@@ -531,34 +531,21 @@
     function handleCategoryChange(category) {
       const processingChips = document.querySelectorAll('#processing-chips .chip');
       const angleChips = document.querySelectorAll('#angle-chips .chip');
-      const interiorAngleChip = document.querySelector('#angle-chips .chip[data-value="interior"]');
       
       if (category === 'interior') {
-        // Disable angle and processing chips for interior
+        // For interior category, always set the angle to "interior"
+        selectedAngle = 'interior';
+        
+        // Disable processing chips for interior
         processingChips.forEach(chip => {
           chip.style.opacity = '0.5';
           chip.style.pointerEvents = 'none';
         });
         
-        // Hide the interior angle chip since it's redundant
-        if (interiorAngleChip) {
-          interiorAngleChip.style.display = 'none';
-        }
-        
-        // Select first available angle by default (usually "Front")
-        const firstAngleChip = document.querySelector('#angle-chips .chip[data-value="front"]');
-        if (firstAngleChip) {
-          angleChips.forEach(c => c.classList.remove('selected'));
-          firstAngleChip.classList.add('selected');
-          selectedAngle = 'front'; // This gets ignored anyway for interior
-        }
-        
-        // Disable all exterior angles since they don't apply to interior
+        // Disable all angle chips since they don't apply to interior
         angleChips.forEach(chip => {
-          if (chip.getAttribute('data-value') !== 'interior') {
-            chip.style.opacity = '0.5';
-            chip.style.pointerEvents = 'none';
-          }
+          chip.style.opacity = '0.5';
+          chip.style.pointerEvents = 'none';
         });
       } else {
         // Enable all chips for exterior
@@ -567,26 +554,19 @@
           chip.style.pointerEvents = 'auto';
         });
         
-        // Hide interior angle and enable all other angle chips
+        // Enable all angle chips for exterior
         angleChips.forEach(chip => {
-          if (chip.getAttribute('data-value') === 'interior') {
-            // Hide the interior angle chip for exterior category
-            chip.style.display = 'none';
-          } else {
-            // Enable all exterior angles
-            chip.style.opacity = '1';
-            chip.style.pointerEvents = 'auto';
-            chip.style.display = 'inline-block';
-          }
+          chip.style.opacity = '1';
+          chip.style.pointerEvents = 'auto';
         });
         
-        // If interior angle was selected, switch to the first angle
+        // If we were showing interior, switch to front angle
         if (selectedAngle === 'interior') {
-          const firstAngleChip = document.querySelector('#angle-chips .chip[data-value="front"]');
-          if (firstAngleChip) {
+          selectedAngle = 'front';
+          const frontAngleChip = document.querySelector('#angle-chips .chip[data-value="front"]');
+          if (frontAngleChip) {
             angleChips.forEach(c => c.classList.remove('selected'));
-            firstAngleChip.classList.add('selected');
-            selectedAngle = 'front';
+            frontAngleChip.classList.add('selected');
           }
         }
       }
