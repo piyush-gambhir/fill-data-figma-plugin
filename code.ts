@@ -687,6 +687,24 @@ interface SheetDataParsedMessage {
 
 type UIMessage = InsertFieldMessage | InsertImageMessage | UpdateSheetConfigMessage | SheetDataParsedMessage;
 
+// Function to get the next angle in sequence
+function getNextAngle(currentAngle: string): string {
+    const angleSequence = [
+        "front",
+        "front_left",
+        "left",
+        "rear_left",
+        "rear",
+        "rear_right",
+        "right",
+        "front_right"
+    ];
+    
+    const currentIndex = angleSequence.indexOf(currentAngle);
+    if (currentIndex === -1) return angleSequence[0];
+    return angleSequence[(currentIndex + 1) % angleSequence.length];
+}
+
 figma.ui.onmessage = async (msg: UIMessage) => {
     if (msg.type === "INSERT_FIELD") {
         const { field } = msg.payload;
@@ -764,7 +782,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             );
         }
     } else if (msg.type === "INSERT_IMAGE") {
-        const { processing, ratio, angle, vinIndices } = msg.payload;
+        const { processing, ratio, angle: initialAngle, vinIndices } = msg.payload;
         const selectedNodes = figma.currentPage.selection;
 
         // Check for selection
@@ -804,13 +822,15 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             }
 
             // Use vehicle data with URLs
+            let currentAngle = initialAngle;
+            
             for (let i = 0; i < validNodes.length; i++) {
                 const node = validNodes[i];
                 // Select vehicle using modulo to cycle through the selected vehicles
                 const vehicle = vehiclesToUse[i % vehiclesToUse.length];
                 
-                // Get URL from vehicle data
-                const imageUrl = getAngleUrl(vehicle, angle, processing);
+                // Get URL from vehicle data using the current angle
+                const imageUrl = getAngleUrl(vehicle, currentAngle, processing);
                 
                 if (imageUrl) {
                     const success = await createImageFrame(
@@ -832,10 +852,13 @@ figma.ui.onmessage = async (msg: UIMessage) => {
                             : node as FrameNode,
                         node.width,
                         node.height,
-                        `No ${angle} image found for ${vehicle.year} ${vehicle.make} ${vehicle.model}`
+                        `No ${currentAngle} image found for ${vehicle.year} ${vehicle.make} ${vehicle.model}`
                     );
                     failureCount++;
                 }
+
+                // Get next angle for the next frame
+                currentAngle = getNextAngle(currentAngle);
             }
 
             // Create notification message
