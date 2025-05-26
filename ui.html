@@ -268,6 +268,36 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #999;
     }
+
+    .vehicle-data-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .vehicle-data-chips .chip {
+      padding: 6px 10px;
+      font-size: 12px;
+      flex: 0 0 auto;
+      white-space: nowrap;
+      margin: 0;
+    }
+
+    /* Update the general chip styles to not affect vehicle data chips */
+    .chip-container:not(.vehicle-data-chips) .chip {
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+
+    .chip.clicked {
+      transform: scale(0.95);
+      transition: transform 0.2s ease;
+    }
+
+    /* Remove the old grid styles since we're using chips now */
+    .grid {
+      display: none;
+    }
   </style>
 </head>
 
@@ -275,9 +305,9 @@
   <div class="section">
     <div class="section-header">
       <h2>Google Sheet Configuration</h2>
-      <div class="toggle-icon">▼</div>
+      <div class="toggle-icon collapsed">▼</div>
     </div>
-    <div class="section-content">
+    <div class="section-content collapsed">
       <div>
         <label for="sheet-url">Google Sheet URL</label>
         <input type="text" id="sheet-url" placeholder="Paste your Google Sheet link here">
@@ -306,24 +336,26 @@
       <div class="toggle-icon">▼</div>
     </div>
     <div class="section-content">
-      <div class="grid">
-        <button id="insert-vin">VIN</button>
-        <button id="insert-year">Year</button>
-        <button id="insert-make">Make</button>
-        <button id="insert-model">Model</button>
-        <button id="insert-trim">Trim</button>
-        <button id="insert-price">Price</button>
-        <button id="insert-body-type">Body Type</button>
-        <button id="insert-engine">Engine</button>
-        <button id="insert-transmission">Transmission</button>
-        <button id="insert-fuel-type">Fuel Type</button>
-        <button id="insert-mileage">Mileage</button>
-        <button id="insert-exterior-color">Exterior Color</button>
-        <button id="insert-interior-color">Interior Color</button>
-        <button id="insert-drivetrain">Drivetrain</button>
-        <button id="insert-features">Features</button>
-        <button id="insert-fullname">Full Name</button>
-        <button id="insert-full-specs">Full Specs</button>
+      <div class="chip-group">
+        <div class="chip-container vehicle-data-chips">
+          <div class="chip" data-field="vin">VIN</div>
+          <div class="chip" data-field="year">Year</div>
+          <div class="chip" data-field="make">Make</div>
+          <div class="chip" data-field="model">Model</div>
+          <div class="chip" data-field="trim">Trim</div>
+          <div class="chip" data-field="price">Price</div>
+          <div class="chip" data-field="body_type">Body Type</div>
+          <div class="chip" data-field="engine">Engine</div>
+          <div class="chip" data-field="transmission">Transmission</div>
+          <div class="chip" data-field="fuel_type">Fuel Type</div>
+          <div class="chip" data-field="mileage">Mileage</div>
+          <div class="chip" data-field="exterior_color">Exterior Color</div>
+          <div class="chip" data-field="interior_color">Interior Color</div>
+          <div class="chip" data-field="drivetrain">Drivetrain</div>
+          <div class="chip" data-field="features">Features</div>
+          <div class="chip" data-field="fullname">Full Name</div>
+          <div class="chip" data-field="full_specs">Full Specs</div>
+        </div>
       </div>
     </div>
   </div>
@@ -383,7 +415,6 @@
             <div class="chip" data-value="rear_right">Rear Right (225°)</div>
             <div class="chip" data-value="right">Right (270°)</div>
             <div class="chip" data-value="front_right">Front Right (315°)</div>
-            <div class="chip" data-value="interior">Interior</div>
           </div>
         </div>
 
@@ -531,34 +562,21 @@
     function handleCategoryChange(category) {
       const processingChips = document.querySelectorAll('#processing-chips .chip');
       const angleChips = document.querySelectorAll('#angle-chips .chip');
-      const interiorAngleChip = document.querySelector('#angle-chips .chip[data-value="interior"]');
       
       if (category === 'interior') {
-        // Disable angle and processing chips for interior
+        // For interior category, always set the angle to "interior"
+        selectedAngle = 'interior';
+        
+        // Disable processing chips for interior
         processingChips.forEach(chip => {
           chip.style.opacity = '0.5';
           chip.style.pointerEvents = 'none';
         });
         
-        // Hide the interior angle chip since it's redundant
-        if (interiorAngleChip) {
-          interiorAngleChip.style.display = 'none';
-        }
-        
-        // Select first available angle by default (usually "Front")
-        const firstAngleChip = document.querySelector('#angle-chips .chip[data-value="front"]');
-        if (firstAngleChip) {
-          angleChips.forEach(c => c.classList.remove('selected'));
-          firstAngleChip.classList.add('selected');
-          selectedAngle = 'front'; // This gets ignored anyway for interior
-        }
-        
-        // Disable all exterior angles since they don't apply to interior
+        // Disable all angle chips since they don't apply to interior
         angleChips.forEach(chip => {
-          if (chip.getAttribute('data-value') !== 'interior') {
-            chip.style.opacity = '0.5';
-            chip.style.pointerEvents = 'none';
-          }
+          chip.style.opacity = '0.5';
+          chip.style.pointerEvents = 'none';
         });
       } else {
         // Enable all chips for exterior
@@ -567,26 +585,19 @@
           chip.style.pointerEvents = 'auto';
         });
         
-        // Hide interior angle and enable all other angle chips
+        // Enable all angle chips for exterior
         angleChips.forEach(chip => {
-          if (chip.getAttribute('data-value') === 'interior') {
-            // Hide the interior angle chip for exterior category
-            chip.style.display = 'none';
-          } else {
-            // Enable all exterior angles
-            chip.style.opacity = '1';
-            chip.style.pointerEvents = 'auto';
-            chip.style.display = 'inline-block';
-          }
+          chip.style.opacity = '1';
+          chip.style.pointerEvents = 'auto';
         });
         
-        // If interior angle was selected, switch to the first angle
+        // If we were showing interior, switch to front angle
         if (selectedAngle === 'interior') {
-          const firstAngleChip = document.querySelector('#angle-chips .chip[data-value="front"]');
-          if (firstAngleChip) {
+          selectedAngle = 'front';
+          const frontAngleChip = document.querySelector('#angle-chips .chip[data-value="front"]');
+          if (frontAngleChip) {
             angleChips.forEach(c => c.classList.remove('selected'));
-            firstAngleChip.classList.add('selected');
-            selectedAngle = 'front';
+            frontAngleChip.classList.add('selected');
           }
         }
       }
@@ -642,11 +653,14 @@
       showDataStatus('Connecting to Google Sheet...', 'waiting');
     });
 
-    // Add event listeners to data buttons
-    document.querySelectorAll('.grid button').forEach(button => {
-      button.addEventListener('click', () => {
-        const fieldId = button.id.replace('insert-', '');
-        const field = fieldId.replace(/-/g, '_');
+    // Set up vehicle data chips
+    document.querySelectorAll('.vehicle-data-chips .chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const field = chip.getAttribute('data-field');
+        
+        // Add visual feedback
+        chip.classList.add('clicked');
+        setTimeout(() => chip.classList.remove('clicked'), 200);
 
         parent.postMessage({
           pluginMessage: {
