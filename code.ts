@@ -144,7 +144,7 @@ async function updateTextNode(node: TextNode, value: string): Promise<boolean> {
         // Try to load the current font first
         try {
             await figma.loadFontAsync(currentFont);
-        } catch (error) {
+        } catch (_error) {
             // If current font fails, try system fonts
             const systemFonts = await getSystemFonts();
             let fontLoaded = false;
@@ -774,11 +774,11 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
             // Show notification
             figma.notify(message);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error updating text layers:", error);
             figma.notify(
                 "Error updating text layers: " +
-                (error.message || "Unknown error")
+                ((error as Error).message || "Unknown error")
             );
         }
     } else if (msg.type === "INSERT_IMAGE") {
@@ -873,10 +873,10 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
             // Show notification
             figma.notify(message);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error updating frames:", error);
             figma.notify(
-                "Error updating frames: " + (error.message || "Unknown error")
+                "Error updating frames: " + ((error as Error).message || "Unknown error")
             );
         }
     } else if (msg.type === "UPDATE_SHEET_CONFIG") {
