@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Your Figma Plugin",
   "main": "code.js",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint --ext .ts,.tsx --ignore-pattern node_modules .",
