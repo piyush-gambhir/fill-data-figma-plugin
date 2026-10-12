@@ -16,7 +16,7 @@
   "author": "",
   "license": "",
   "devDependencies": {
-    "@eslint/js": "^10.0.0",
+    "@eslint/js": "^10.0.1",
     "@figma/eslint-plugin-figma-plugins": "*",
     "@figma/plugin-typings": "*",
     "eslint": "^10.12.0",
