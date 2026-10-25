@@ -3,25 +3,27 @@
   "version": "1.0.0",
   "description": "Your Figma Plugin",
   "main": "code.js",
-  "packageManager": "pnpm@12.11.2",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
-    "node": ">=24.22.1 <25"
+    "node": ">=26.12.1 <27"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node node_modules/typescript7/bin/tsc -p tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "watch": "npm run build -- --watch"
+    "watch": "npm run build -- --watch",
+    "typecheck": "node node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json"
   },
   "author": "",
   "license": "",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@figma/eslint-plugin-figma-plugins": "*",
-    "@figma/plugin-typings": "*",
-    "eslint": "^10.12.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.71.2"
+    "@figma/eslint-plugin-figma-plugins": "1.0.0",
+    "@figma/plugin-typings": "1.142.0",
+    "eslint": "^10.13.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "typescript7": "npm:typescript@7.0.2"
   },
   "dependencies": {
     "figma": "^0.0.1"
