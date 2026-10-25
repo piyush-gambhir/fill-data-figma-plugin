@@ -1,7 +1,7 @@
 {
   "name": "Spyne-vehicle-info",
   "version": "1.0.0",
-  "description": "Your Figma Plugin",
+  "description": "Populate selected Figma layers with vehicle data.",
   "main": "code.js",
   "packageManager": "pnpm@12.15.0",
   "engines": {
@@ -24,8 +24,5 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.0",
     "typescript7": "npm:typescript@7.0.2"
-  },
-  "dependencies": {
-    "figma": "^0.0.1"
   }
 }
