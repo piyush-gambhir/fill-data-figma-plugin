@@ -1,0 +1,56 @@
+name: Release downloadable package
+'on':
+  push:
+    tags:
+    - v*
+  workflow_dispatch: null
+permissions:
+  contents: read
+jobs:
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v7.0.1
+      with:
+        persist-credentials: false
+    - uses: pnpm/action-setup@v6
+      with:
+        version: 12.15.0
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 26.12.1
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile
+    - name: Verify version tag
+      env:
+        TAG: ${{ github.ref_name }}
+      run: test "v$(node -p "require('./package.json').version")" = "$TAG"
+    - run: pnpm lint
+    - run: pnpm typecheck
+    - run: pnpm build
+    - name: Package Figma runtime files
+      run: "python3 - <<'PYTHON'\nimport hashlib, json, pathlib, zipfile\np = pathlib.Path('.')\nm = json.loads((p / 'manifest.json').read_text())\n\
+        files = ['manifest.json', m['main'], m['ui'], 'README.md', 'LICENSE', 'Vehicle Data.csv']\nassert all((p / f).is_file()\
+        \ for f in files)\npathlib.Path('release').mkdir()\nversion = json.loads((p / 'package.json').read_text())['version']\n\
+        z = pathlib.Path('release') / ('fill-data-figma-plugin-' + version + '.zip')\nwith zipfile.ZipFile(z, 'w', zipfile.ZIP_DEFLATED)\
+        \ as a:\n    for f in files: a.write(f, f)\nwith zipfile.ZipFile(z) as a: assert a.testzip() is None\npathlib.Path('release/checksums.txt').write_text(hashlib.sha256(z.read_bytes()).hexdigest()\
+        \ + '  ' + z.name + '\\n')\nPYTHON"
+    - name: Write release notes
+      env:
+        RELEASE_NOTES: 'Compiled Figma plugin ZIP. Extract it and import manifest.json as a development plugin. Actual Figma
+          host, external Google Sheet/image requests and Community publication remain separate verification steps.
+
+
+          Made by gpt-6 in Codex
+
+          '
+      run: printf '%s' "$RELEASE_NOTES" > release-notes.txt
+    - name: Publish GitHub release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ github.ref_name }}
+      run: gh release create "$TAG" release/*.zip release/checksums.txt --verify-tag --title "$TAG" --notes-file release-notes.txt
