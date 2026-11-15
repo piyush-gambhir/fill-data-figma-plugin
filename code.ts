@@ -27,25 +27,25 @@ interface VehicleEntry {
     interior?: string;
 }
 
-// Configuration for Google Sheet
+
 interface SheetConfig {
     sheetId: string;
     sheetName: string;
-    apiKey?: string; // Optional API key if using Google Sheets API instead of public CSV
+    apiKey?: string;
 }
 
-// Default configuration (can be updated from UI)
+
 let sheetConfig: SheetConfig = {
     sheetId: "",
     sheetName: "Sheet1"
 };
 
-// Store fetched vehicle data
+
 let vehicleData: VehicleEntry[] = [];
 let currentIndex = 0;
 let isDataLoaded = false;
 
-// Helper function to get system fonts
+
 async function getSystemFonts(): Promise<FontName[]> {
     const systemFonts = [
         { family: "Inter", style: "Regular" },
@@ -55,17 +55,17 @@ async function getSystemFonts(): Promise<FontName[]> {
     return systemFonts;
 }
 
-// Function to fetch data from Google Sheet
+
 async function fetchSheetData(config: SheetConfig): Promise<VehicleEntry[]> {
     try {
         if (!config.sheetId) {
             throw new Error("Sheet ID is required");
         }
 
-        // Construct the URL to fetch CSV data from public Google Sheet
+
         const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(config.sheetName)}`;
         
-        // Send request to UI to fetch data
+
         return new Promise((resolve, reject) => {
             figma.ui.postMessage({
                 type: "FETCH_SHEET_DATA",
@@ -74,7 +74,7 @@ async function fetchSheetData(config: SheetConfig): Promise<VehicleEntry[]> {
                 }
             });
 
-            // Handler for sheet data response
+
             const messageHandler = (msg: {type: string; error?: string; data?: VehicleEntry[]}) => {
                 if (msg.type === "SHEET_DATA_RESULT") {
                     figma.ui.off("message", messageHandler);
@@ -95,9 +95,9 @@ async function fetchSheetData(config: SheetConfig): Promise<VehicleEntry[]> {
     }
 }
 
-// Helper function to get data for a specific index
+
 function getVehicleData(index: number, field: string) {
-    // Return placeholder if data not loaded
+
     if (!isDataLoaded || vehicleData.length === 0) {
         return {
             value: "Loading...",
@@ -135,17 +135,17 @@ ${Array.isArray(entry.features) ? entry.features.join(", ") : "N/A"}`.trim(),
     };
 }
 
-// Helper function to update a single text node
+
 async function updateTextNode(node: TextNode, value: string): Promise<boolean> {
     try {
-        // Get the current font
+
         const currentFont = node.fontName as FontName;
 
-        // Try to load the current font first
+
         try {
             await figma.loadFontAsync(currentFont);
         } catch (_error) {
-            // If current font fails, try system fonts
+
             const systemFonts = await getSystemFonts();
             let fontLoaded = false;
 
@@ -166,16 +166,16 @@ async function updateTextNode(node: TextNode, value: string): Promise<boolean> {
             }
         }
 
-        // Store original text properties
+
         const originalSize = node.fontSize;
         const originalColor = node.fills;
         const originalAlign = node.textAlignHorizontal;
         const originalAutoResize = node.textAutoResize;
 
-        // Update the text
+
         node.characters = value;
 
-        // Restore original properties
+
         if (originalSize) node.fontSize = originalSize;
         if (originalColor) node.fills = originalColor;
         if (originalAlign) node.textAlignHorizontal = originalAlign;
@@ -188,14 +188,14 @@ async function updateTextNode(node: TextNode, value: string): Promise<boolean> {
     }
 }
 
-// Function to get the appropriate URL based on angle and processing type
+
 function getAngleUrl(vehicle: VehicleEntry, angle: string, processing: string): string | null {
-    // Special case for interior images
+
     if (angle === "interior") {
         return vehicle.interior || null;
     }
 
-    // Map angle to the corresponding URL property
+
     const angleToPropertyMap: Record<string, keyof VehicleEntry> = {
         "front": "front_0_url",
         "front_left": "front_left_45_url",
@@ -209,7 +209,7 @@ function getAngleUrl(vehicle: VehicleEntry, angle: string, processing: string): 
     
     let urlProperty = angleToPropertyMap[angle];
     
-    // If processing is "raw", append "_input" to get the raw image URL
+
     if (processing === "raw" && urlProperty) {
         urlProperty = `${urlProperty}_input` as keyof VehicleEntry;
     }
@@ -220,13 +220,13 @@ function getAngleUrl(vehicle: VehicleEntry, angle: string, processing: string): 
     return null;
 }
 
-// Helper function to get error message
+
 function _getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
     return String(error);
 }
 
-// Updated createImageFrame function that uses async node methods
+
 async function createImageFrame(
     node: FrameNode | RectangleNode,
     imageUrl: string,
@@ -236,7 +236,7 @@ async function createImageFrame(
         figma.notify("Starting image insertion...", { timeout: 2000 });
         console.log("Starting image insertion for URL:", imageUrl);
 
-        // Convert rectangle to frame if needed
+
         let frameNode: FrameNode;
         if (node.type === "RECTANGLE") {
             const frame = figma.createFrame();
@@ -252,44 +252,44 @@ async function createImageFrame(
             frameNode = node as FrameNode;
         }
 
-        // Store original dimensions
+
         const originalWidth = frameNode.width;
         const originalHeight = frameNode.height;
 
-        // Calculate dimensions while preserving aspect ratio
+
         let targetWidth = originalWidth;
         let targetHeight = originalHeight;
 
-        // Calculate the current aspect ratio
+
         const currentRatio = originalWidth / originalHeight;
 
-        // Calculate the target aspect ratio
+
         const targetRatio =
             ratio === "16:9" ? 16 / 9 : ratio === "4:3" ? 4 / 3 : 1;
 
-        // Adjust dimensions to match target ratio while trying to maintain original size
+
         if (currentRatio > targetRatio) {
-            // Current frame is too wide
+
             targetWidth = targetHeight * targetRatio;
         } else {
-            // Current frame is too tall
+
             targetHeight = targetWidth / targetRatio;
         }
 
-        // Center the frame if dimensions changed
+
         frameNode.x += (originalWidth - targetWidth) / 2;
         frameNode.y += (originalHeight - targetHeight) / 2;
 
-        // Resize frame to target dimensions
+
         frameNode.resize(targetWidth, targetHeight);
 
-        // Set constraints to ensure image stays centered
+
         frameNode.constraints = {
             horizontal: "CENTER",
             vertical: "CENTER",
         };
 
-        // Show loading state
+
         frameNode.fills = [
             {
                 type: "SOLID",
@@ -298,7 +298,7 @@ async function createImageFrame(
             },
         ];
 
-        // Add loading text
+
         const loadingText = figma.createText();
         await figma.loadFontAsync({ family: "Inter", style: "Regular" });
         loadingText.characters = "Loading image...";
@@ -312,18 +312,18 @@ async function createImageFrame(
         loadingText.x = (targetWidth - loadingText.width) / 2;
         loadingText.y = (targetHeight - loadingText.height) / 2;
 
-        // Save frame ID for later validation
+
         const frameId = frameNode.id;
 
-        // Create a promise to handle the image loading
+
         return new Promise((resolve) => {
             let hasResolved = false;
             let timeoutId: number | null = null;
 
-            // Message handler for image data
+
             const messageHandler = async (msg: {type: string; data?: number[]; error?: string}) => {
                 try {
-                    // Validate message
+
                     if (!msg || typeof msg.type !== 'string') {
                         console.warn('Received malformed or undefined pluginMessage:', msg);
                         return;
@@ -337,7 +337,7 @@ async function createImageFrame(
                             timeoutId = null;
                         }
 
-                        // Check if our frame node still exists - USING ASYNC VERSION
+
                         try {
                             const frameNodeStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
                             if (!frameNodeStillExists) {
@@ -347,9 +347,9 @@ async function createImageFrame(
                                 return;
                             }
 
-                            // The node exists, now check for loading text nodes
+
                             try {
-                                // Get all text nodes inside the frame
+
                                 for (const child of frameNodeStillExists.children) {
                                     if (child.type === "TEXT" && child.characters === "Loading image...") {
                                         child.remove();
@@ -357,23 +357,23 @@ async function createImageFrame(
                                 }
                             } catch (e) {
                                 console.warn("Couldn't remove loading text:", e);
-                                // Non-critical error, continue
+
                             }
 
-                            // Proceed with image data
+
                             if (!msg.data || !Array.isArray(msg.data) || msg.data.length === 0) {
                                 throw new Error("No valid image data received");
                             }
 
-                            // Convert array back to Uint8Array
+
                             const imageData = new Uint8Array(msg.data);
                             console.log(`Received image data of length: ${imageData.length}`);
 
                             try {
-                                // Create and apply image
+
                                 const image = await figma.createImage(imageData);
 
-                                // Check if frame still exists before setting fills
+
                                 const frameStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
                                 if (!frameStillExists) {
                                     console.error("Frame no longer exists when setting image");
@@ -411,7 +411,7 @@ async function createImageFrame(
                                     error: errorMsg,
                                 });
 
-                                // Check if frame still exists before creating placeholder
+
                                 try {
                                     const frameStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
                                     if (frameStillExists) {
@@ -441,11 +441,11 @@ async function createImageFrame(
                             timeoutId = null;
                         }
 
-                        // Check if our frame still exists
+
                         try {
                             const frameNodeStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
                             if (frameNodeStillExists) {
-                                // Remove loading text if it exists
+
                                 for (const child of frameNodeStillExists.children) {
                                     if (child.type === "TEXT" && child.characters === "Loading image...") {
                                         child.remove();
@@ -479,13 +479,13 @@ async function createImageFrame(
                 } catch (handlerError) {
                     console.error("Error in message handler:", handlerError);
 
-                    // Only handle if we haven't resolved yet
+
                     if (!hasResolved) {
                         try {
-                            // Check if our frame still exists
+
                             const frameNodeStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
                             if (frameNodeStillExists) {
-                                // Remove loading text if it exists
+
                                 for (const child of frameNodeStillExists.children) {
                                     if (child.type === "TEXT" && child.characters === "Loading image...") {
                                         child.remove();
@@ -514,23 +514,23 @@ async function createImageFrame(
                 }
             };
 
-            // Add message listener
+
             figma.ui.on("message", messageHandler);
 
-            // Request image data from UI
+
             figma.ui.postMessage({
                 type: "FETCH_IMAGE",
                 url: imageUrl,
             });
 
-            // Set timeout
+
             timeoutId = setTimeout(async () => {
                 if (!hasResolved) {
                     try {
-                        // Check if our frame still exists
+
                         const frameNodeStillExists = await figma.getNodeByIdAsync(frameId) as FrameNode | null;
                         if (frameNodeStillExists) {
-                            // Remove loading text if it exists
+
                             for (const child of frameNodeStillExists.children) {
                                 if (child.type === "TEXT" && child.characters === "Loading image...") {
                                     child.remove();
@@ -562,7 +562,7 @@ async function createImageFrame(
                     resolve(false);
                 }
                 figma.ui.off("message", messageHandler);
-            }, 60000); // 60 second timeout
+            }, 60000);
         });
     } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
@@ -573,7 +573,7 @@ async function createImageFrame(
     }
 }
 
-// Make createPlaceholder async as well
+
 async function createPlaceholder(
     frameNode: FrameNode,
     width: number,
@@ -581,7 +581,7 @@ async function createPlaceholder(
     errorMessage: string
 ) {
     try {
-        // Add placeholder fill
+
         frameNode.fills = [
             {
                 type: "SOLID",
@@ -590,7 +590,7 @@ async function createPlaceholder(
             },
         ];
 
-        // Add error message
+
         const text = figma.createText();
         await figma.loadFontAsync({ family: "Inter", style: "Regular" });
         text.characters = errorMessage;
@@ -599,7 +599,7 @@ async function createPlaceholder(
         text.fontSize = 12;
         text.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
 
-        // Center the text in the frame
+
         text.resize(width * 0.8, height * 0.8);
         frameNode.appendChild(text);
         text.x = (width - text.width) / 2;
@@ -612,10 +612,10 @@ async function createPlaceholder(
     }
 }
 
-// Initialize by loading data from Google Sheet if available
+
 async function initializePlugin() {
     try {
-        // First check if we have stored config
+
         const storedConfig = await figma.clientStorage.getAsync('sheetConfig');
         if (storedConfig) {
             sheetConfig = JSON.parse(storedConfig as string);
@@ -625,7 +625,7 @@ async function initializePlugin() {
             });
         }
         
-        // Try to load data if we have a sheet ID
+
         if (sheetConfig.sheetId) {
             figma.notify("Loading vehicle data from Google Sheet...");
             
@@ -639,7 +639,7 @@ async function initializePlugin() {
                 const errorMsg = error instanceof Error ? error.message : String(error);
                 figma.notify(`Error loading sheet data: ${errorMsg}`, { error: true });
                 
-                // Initialize with empty array
+
                 vehicleData = [];
                 isDataLoaded = false;
             }
@@ -653,10 +653,10 @@ async function initializePlugin() {
     }
 }
 
-// Call initialize on startup
+
 initializePlugin();
 
-// Message handler types
+
 interface InsertFieldMessage {
     type: "INSERT_FIELD";
     payload: {
@@ -687,7 +687,7 @@ interface SheetDataParsedMessage {
 
 type UIMessage = InsertFieldMessage | InsertImageMessage | UpdateSheetConfigMessage | SheetDataParsedMessage;
 
-// Function to get the next angle in sequence
+
 function getNextAngle(currentAngle: string): string {
     const angleSequence = [
         "front",
@@ -710,13 +710,13 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         const { field } = msg.payload;
         const selectedNodes = figma.currentPage.selection;
 
-        // Check for selection
+
         if (selectedNodes.length === 0) {
             figma.notify("Please select at least one text layer");
             return;
         }
 
-        // Filter text nodes
+
         const textNodes = selectedNodes.filter((node) => node.type === "TEXT");
         if (textNodes.length === 0) {
             figma.notify("Please select at least one text layer");
@@ -724,18 +724,18 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         }
 
         try {
-            // Check if data is loaded
+
             if (!isDataLoaded || vehicleData.length === 0) {
                 figma.notify("No vehicle data loaded. Please configure Google Sheet settings.");
                 return;
             }
 
-            // Track success and failures
+
             let successCount = 0;
             let failureCount = 0;
             const updatedVehicles = new Set<string>();
 
-            // Update each text node with different vehicle data
+
             for (let i = 0; i < textNodes.length; i++) {
                 const node = textNodes[i];
                 const dataIndex = (currentIndex + i) % vehicleData.length;
@@ -755,11 +755,11 @@ figma.ui.onmessage = async (msg: UIMessage) => {
                 }
             }
 
-            // Update the current index to the next unused vehicle
+
             currentIndex =
                 (currentIndex + textNodes.length) % vehicleData.length;
 
-            // Create notification message
+
             let message = "";
             if (successCount > 0 && failureCount === 0) {
                 const vehicleList = Array.from(updatedVehicles).join(", ");
@@ -772,7 +772,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
                 message = "Failed to update any layers";
             }
 
-            // Show notification
+
             figma.notify(message);
         } catch (error) {
             console.error("Error updating text layers:", error);
@@ -785,13 +785,13 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         const { processing, ratio, angle: initialAngle, vinIndices } = msg.payload;
         const selectedNodes = figma.currentPage.selection;
 
-        // Check for selection
+
         if (selectedNodes.length === 0) {
             figma.notify("Please select at least one frame or rectangle");
             return;
         }
 
-        // Filter frame and rectangle nodes
+
         const validNodes = selectedNodes.filter(
             (node) => node.type === "FRAME" || node.type === "RECTANGLE"
         );
@@ -802,34 +802,34 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         }
 
         try {
-            // Check if data is loaded
+
             if (!isDataLoaded || vehicleData.length === 0) {
                 figma.notify("No vehicle data loaded. Please configure Google Sheet settings.");
                 return;
             }
 
-            // Track success and failures
+
             let successCount = 0;
             let failureCount = 0;
             
-            // If vinIndices is provided, use those specific vehicles
+
             let vehiclesToUse: VehicleEntry[] = [];
             if (vinIndices && vinIndices.length > 0) {
                 vehiclesToUse = vinIndices.map((index: number) => vehicleData[index]);
             } else if (vehicleData.length > 0) {
-                // Otherwise use the current index vehicle
+
                 vehiclesToUse = [vehicleData[currentIndex % vehicleData.length]];
             }
 
-            // Use vehicle data with URLs
+
             let currentAngle = initialAngle;
             
             for (let i = 0; i < validNodes.length; i++) {
                 const node = validNodes[i];
-                // Select vehicle using modulo to cycle through the selected vehicles
+
                 const vehicle = vehiclesToUse[i % vehiclesToUse.length];
                 
-                // Get URL from vehicle data using the current angle
+
                 const imageUrl = getAngleUrl(vehicle, currentAngle, processing);
                 
                 if (imageUrl) {
@@ -845,7 +845,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
                         failureCount++;
                     }
                 } else {
-                    // Create placeholder if no image URL found
+
                     await createPlaceholder(
                         node.type === "RECTANGLE" 
                             ? figma.createFrame() 
@@ -857,11 +857,11 @@ figma.ui.onmessage = async (msg: UIMessage) => {
                     failureCount++;
                 }
 
-                // Get next angle for the next frame
+
                 currentAngle = getNextAngle(currentAngle);
             }
 
-            // Create notification message
+
             let message = "";
             if (successCount > 0 && failureCount === 0) {
                 message = `Updated ${successCount} frame${successCount > 1 ? "s" : ""} with images`;
@@ -871,7 +871,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
                 message = "Failed to update any frames with images";
             }
 
-            // Show notification
+
             figma.notify(message);
         } catch (error) {
             console.error("Error updating frames:", error);
@@ -880,7 +880,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             );
         }
     } else if (msg.type === "UPDATE_SHEET_CONFIG") {
-        // Update sheet configuration
+
         try {
             const newConfig = msg.payload;
             if (!newConfig || !newConfig.sheetId) {
@@ -888,10 +888,10 @@ figma.ui.onmessage = async (msg: UIMessage) => {
                 return;
             }
 
-            // Update config
+
             sheetConfig = newConfig;
             
-            // Store in client storage
+
             await figma.clientStorage.setAsync(
                 'sheetConfig', 
                 JSON.stringify(sheetConfig)
@@ -899,7 +899,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             
             figma.notify("Sheet configuration updated. Reloading data...");
             
-            // Try to load data with new config
+
             try {
                 const data = await fetchSheetData(sheetConfig);
                 vehicleData = data;
@@ -910,7 +910,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
                 const errorMsg = error instanceof Error ? error.message : String(error);
                 figma.notify(`Error loading sheet data: ${errorMsg}`, { error: true });
                 
-                // Initialize with empty array
+
                 vehicleData = [];
                 isDataLoaded = false;
             }
@@ -920,7 +920,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             figma.notify(`Error updating sheet config: ${errorMsg}`, { error: true });
         }
     } else if (msg.type === "SHEET_DATA_PARSED") {
-        // Receive parsed sheet data from UI
+
         try {
             if (msg.error) {
                 figma.notify(`Error parsing sheet data: ${msg.error}`, { error: true });
